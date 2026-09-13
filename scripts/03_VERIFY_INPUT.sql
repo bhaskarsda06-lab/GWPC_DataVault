@@ -1,9 +1,26 @@
 -- 03_VERIFY_INPUT.sql
+-- Run AFTER 01_DDL.sql and 02_INPUT_DATA.sql.
+
 USE CATALOG autdbt_vault_dev;
+
 SELECT current_catalog() AS current_catalog, current_schema() AS current_schema;
+
 SHOW SCHEMAS;
 SHOW TABLES IN autdbts;
 
+-- Check the two fixes from the latest dbt errors.
+DESCRIBE TABLE autdbts.pc_account_curr;
+DESCRIBE TABLE autdbts.pctl_accountcontactrole_curr;
+
+SELECT publicid, retired, accountname, accountnumber, accounttype, status
+FROM autdbts.pc_account_curr
+ORDER BY publicid;
+
+SELECT publicid, code, typecode, name
+FROM autdbts.pctl_accountcontactrole_curr
+ORDER BY publicid;
+
+-- Row counts
 SELECT 'pc_account_curr' AS object_name, COUNT(*) AS row_count FROM autdbts.pc_account_curr
 UNION ALL SELECT 'pc_accountcontactrole_curr', COUNT(*) FROM autdbts.pc_accountcontactrole_curr
 UNION ALL SELECT 'pc_accountcontact_curr', COUNT(*) FROM autdbts.pc_accountcontact_curr

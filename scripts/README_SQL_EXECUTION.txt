@@ -1,22 +1,31 @@
-GWPC DATA VAULT SQL INPUT PACKAGE
+GWPC DATA VAULT - CORRECTED DEMO SOURCE SQL
 
-Execution order in Databricks SQL Editor:
+Files:
 1. 01_DDL.sql
 2. 02_INPUT_DATA.sql
 3. 03_VERIFY_INPUT.sql
-4. From the Windows project directory:
-   dbt build --select tag:staging --target dev
+
+Project/catalog:
+  autdbt_vault_dev.autdbts
 
 IMPORTANT:
-The DDL is a DEMO input/source contract based on the exact table names reported
-as missing by the supplied dbt build log. It is intended to get the development
-pipeline past the TABLE_OR_VIEW_NOT_FOUND stage.
+- These are DEMO source/input tables for the current dbt staging project.
+- 01_DDL.sql drops and recreates the DEMO tables.
+- Do NOT run 01_DDL.sql against real Guidewire production/source data.
+- The latest dbt log showed that the staging models use "retired = 0".
+  Therefore the seven affected PC tables now contain retired INT.
+- The latest dbt log showed stg_accountcontactrole_type expects typecode.
+  Therefore pctl_accountcontactrole_curr now contains typecode STRING.
 
-It does NOT claim these are the complete or exact Guidewire PolicyCenter
-schemas. If your existing staging SQL references additional columns, the next
-error will identify those columns; then the source DDL should be aligned to
-your actual source metadata.
+EXECUTION ORDER IN DATABRICKS SQL:
+  1. Run 01_DDL.sql
+  2. Run 02_INPUT_DATA.sql
+  3. Run 03_VERIFY_INPUT.sql
 
-The project currently references catalog autdbt_vault_dev and schema autdbts.
-Do not change that naming unless your dbt project is intentionally configured
-for another catalog/schema.
+THEN FROM WINDOWS TERMINAL:
+  cd C:\Users\BhaskarGajjala\Documents\GitHub\GWPC_DataVault
+  dbt build --select tag:staging --target dev
+
+If the next dbt run reports another missing column, align the DEMO source
+contract to the existing staging SQL instead of changing the Data Vault models
+without checking the source contract.

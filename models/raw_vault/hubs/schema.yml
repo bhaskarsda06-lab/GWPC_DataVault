@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: hub_account
+    description: "Raw Vault Account Hub."
+    columns:
+      - name: account_hk
+        tests: [not_null, unique]
+      - name: source_system_unique_identifier
+        tests: [not_null]
+      - name: account_number
+        tests: [not_null]
+      - name: source_system_name
+        tests: [not_null]
+      - name: load_dts
+        tests: [not_null]
+
+  - name: hub_contact
+    description: "Raw Vault Contact Hub."
+    columns:
+      - name: contact_hk
+        tests: [not_null, unique]
+      - name: source_system_contact_identifier
+        tests: [not_null]
+      - name: source_system_unique_identifier
+        tests: [not_null]
+      - name: source_system_name
+        tests: [not_null]
+      - name: load_dts
+        tests: [not_null]
+
+  - name: hub_policy
+    description: "Raw Vault Policy Hub."
+    columns:
+      - name: policy_hk
+        tests: [not_null, unique]
+      - name: source_system_unique_identifier
+        tests: [not_null]
+      - name: policy_number
+        tests: [not_null]
+      - name: term_number
+        tests: [not_null]
+      - name: source_system_name
+        tests: [not_null]
+      - name: load_dts
+        tests: [not_null]
