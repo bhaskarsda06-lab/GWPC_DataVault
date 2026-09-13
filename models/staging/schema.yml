@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: stg_account
+    description: "Filtered GWPC account source."
+    columns:
+      - name: publicid
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_contact
+    description: "Filtered GWPC contact source."
+    columns:
+      - name: publicid
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_policyperiod
+    description: "Filtered GWPC policy period source."
+    columns:
+      - name: publicid
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_policycontactrole
+    description: "Filtered GWPC policy contact role source."
+    columns:
+      - name: publicid
+        tests:
+          - not_null
+          - unique

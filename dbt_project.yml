@@ -1,0 +1,23 @@
+name: gwpc_datavault
+version: "1.0.0"
+config-version: 2
+
+profile: gwpc_datavault
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+docs-paths: ["docs"]
+
+clean-targets:
+  - target
+  - dbt_packages
+
+models:
+  gwpc_datavault:
+    staging:
+      +materialized: view
+      +schema: autdbts
+      +tags: ["staging"]

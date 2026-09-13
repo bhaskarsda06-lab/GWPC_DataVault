@@ -1,0 +1,28 @@
+version: 2
+
+sources:
+  - name: gwpc
+    description: "GWPC source tables used by the Data Vault implementation."
+    database: autdbt_vault_dev
+    schema: autdbts
+    tables:
+      - name: pc_account_curr
+      - name: pc_contact_curr
+      - name: pc_policy_curr
+      - name: pc_policyperiod_curr
+      - name: pc_policycontactrole_curr
+      - name: pc_accountcontact_curr
+      - name: pc_accountcontactrole_curr
+      - name: pc_address_curr
+      - name: pc_effectivedatedfields_curr
+      - name: pc_paymentplansummary_curr
+      - name: pctl_accountcontactrole_curr
+      - name: pctl_accountstatus_curr
+      - name: pctl_state_curr
+      - name: pctl_country_curr
+      - name: pctl_namesuffix_curr
+      - name: pctl_maritalstatus_curr
+      - name: pctl_termtype_curr
+      - name: pctl_jurisdiction_curr
+      - name: pctl_billingmethod_curr
+      - name: pctl_policyperiodstatus_curr
