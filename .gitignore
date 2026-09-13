@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# dbt generated/runtime files
+dbt_packages/
+target/
+logs/
+.partial_parse.msgpack
+manifest.json
+run_results.json
+catalog.json
+
+# dbt credentials
+profiles.yml
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

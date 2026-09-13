@@ -1,0 +1,12 @@
+# Copy to C:\Users\<YOUR_USER>\.dbt\profiles.yml
+# Never commit the real profiles.yml.
+gwpc_datavault:
+  target: dev
+  outputs:
+    dev:
+      type: databricks
+      catalog: autdbt_vault_dev
+      schema: autdbts
+      host: <your-databricks-workspace-host>
+      http_path: /sql/1.0/warehouses/<your-sql-warehouse-id>
+      # Configure authentication using your approved local method.
