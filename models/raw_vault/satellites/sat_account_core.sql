@@ -4,54 +4,47 @@
 ) }}
 
 WITH source_data AS (
+
     SELECT
         sha2(
-            concat_ws('|',
+            concat_ws(
+                '|',
                 a.PublicID,
                 a.AccountNumber,
                 'GWPC'
-            ), 256
+            ),
+            256
         ) AS account_hk,
 
-        a.Name AS account_name,
-        addr.AddressLine1 AS account_address,
-        addr.City AS account_city,
-        st.TYPECODE AS account_state_code,
-        co.TYPECODE AS account_country_code,
-        addr.PostalCode AS account_postal_code,
+        a.AccountName AS account_name,
+        a.AccountType AS account_type,
+        a.Status AS account_status,
+
+        a.CreatedDate AS account_created_date,
+        a.UpdatedDate AS account_updated_date,
 
         current_timestamp() AS load_dts,
 
         sha2(
-            concat_ws('|',
-                coalesce(a.Name, ''),
-                coalesce(addr.AddressLine1, ''),
-                coalesce(addr.City, ''),
-                coalesce(st.TYPECODE, ''),
-                coalesce(co.TYPECODE, ''),
-                coalesce(addr.PostalCode, '')
-            ), 256
+            concat_ws(
+                '|',
+                coalesce(a.AccountName, ''),
+                coalesce(a.AccountType, ''),
+                coalesce(a.Status, ''),
+                coalesce(cast(a.CreatedDate AS STRING), ''),
+                coalesce(cast(a.UpdatedDate AS STRING), '')
+            ),
+            256
         ) AS hashdiff
 
     FROM {{ source('gwpc', 'pc_account_curr') }} a
 
-    LEFT JOIN {{ source('gwpc', 'pc_address_curr') }} addr
-        ON a.AddressID = addr.ID
-       AND COALESCE(addr.Retired, 0) = 0
-
-    LEFT JOIN {{ source('gwpc', 'pctl_state_curr') }} st
-        ON addr.State = st.ID
-       AND COALESCE(st.Retired, 0) = 0
-
-    LEFT JOIN {{ source('gwpc', 'pctl_country_curr') }} co
-        ON addr.Country = co.ID
-       AND COALESCE(co.Retired, 0) = 0
-
     WHERE COALESCE(a.Retired, 0) = 0
-      AND COALESCE(a.PublicID, '') <> ''
+      AND COALESCE(TRIM(a.PublicID), '') <> ''
 ),
 
 deduplicated AS (
+
     SELECT *
     FROM (
         SELECT
@@ -68,20 +61,22 @@ deduplicated AS (
 SELECT
     account_hk,
     account_name,
-    account_address,
-    account_city,
-    account_state_code,
-    account_country_code,
-    account_postal_code,
+    account_type,
+    account_status,
+    account_created_date,
+    account_updated_date,
     load_dts,
     hashdiff
+
 FROM deduplicated
 
 {% if is_incremental() %}
+
 WHERE NOT EXISTS (
     SELECT 1
     FROM {{ this }} t
     WHERE t.account_hk = deduplicated.account_hk
       AND t.hashdiff = deduplicated.hashdiff
 )
+
 {% endif %}
