@@ -1,0 +1,5 @@
+Evidence_ID,Backup_Area,Backup_Method,Frequency,Retention,Last_Success,Last_Restore_Test,Owner,Reference,Status
+BKP-001,Data Vault,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,Pending
+BKP-002,dbt source/config,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,Pending
+BKP-003,Databricks metadata,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,Pending
+BKP-004,Job/orchestration,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,Pending

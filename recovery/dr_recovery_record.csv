@@ -1,0 +1,2 @@
+Recovery_ID,Incident_ID,Environment,Detection_Time,Recovery_Start,Service_Restored,Actual_RTO,Last_Valid_Data_Point,Actual_RPO,Validation_Result,Approver,Closure_Reference
+DR-001,<TBD>,prod,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>

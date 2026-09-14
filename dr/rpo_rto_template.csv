@@ -1,0 +1,3 @@
+Metric,Definition,Proposed_Target,Approved_Target,Owner,Approval_Reference
+RPO,Maximum acceptable data loss window,<TBD>,<TBD>,<TBD>,<TBD>
+RTO,Maximum acceptable service restoration time,<TBD>,<TBD>,<TBD>,<TBD>

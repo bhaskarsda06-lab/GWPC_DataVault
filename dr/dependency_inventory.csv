@@ -1,0 +1,9 @@
+Dependency,Type,Production_Required,Recovery_Order,Owner,Recovery_Method,Reference
+Databricks workspace,Platform,Yes,1,<TBD>,Approved platform recovery,<TBD>
+SQL warehouse/compute,Platform,Yes,2,<TBD>,Approved compute recovery,<TBD>
+Unity Catalog,Governance,Yes,3,<TBD>,Approved catalog recovery,<TBD>
+Source systems,Data,Yes,4,<TBD>,Source-specific recovery,<TBD>
+Secrets/identity,Security,Yes,5,<TBD>,Approved secret/identity recovery,<TBD>
+Git/dbt artifacts,Application,Yes,6,<TBD>,Version-controlled deployment,<TBD>
+Scheduler/orchestration,Operations,Yes,7,<TBD>,Approved scheduler recovery,<TBD>
+Monitoring/alerting,Operations,Yes,8,<TBD>,Approved monitoring recovery,<TBD>
