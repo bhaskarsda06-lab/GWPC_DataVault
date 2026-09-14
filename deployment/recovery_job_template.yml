@@ -1,0 +1,21 @@
+# Phase 10.6 Recovery Job Template
+# This is a controlled template. It does not perform recovery automatically.
+
+recovery_mode:
+  require_incident_reference: true
+  require_operator_approval: true
+  require_root_cause_classification: true
+
+validation_sequence:
+  - dbt_parse
+  - targeted_test
+  - dbt_build_if_approved
+  - smoke_tests
+  - operational_tests
+
+commands:
+  parse: dbt parse --target prod
+  targeted_test: dbt test --target prod
+  build: dbt build --target prod
+  smoke: dbt test --target prod --select path:tests/smoke_production
+  operational: dbt test --target prod --select path:tests/operational

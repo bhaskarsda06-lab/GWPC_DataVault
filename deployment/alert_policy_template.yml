@@ -1,0 +1,32 @@
+# Phase 10.6 Alert Policy Template
+# Adapt to the organization's approved Databricks Jobs/notification platform.
+# No credentials are included.
+
+job_name: GWPC_DataVault_Production
+
+notifications:
+  on_start: false
+  on_success: false
+  on_failure: true
+  on_duration_threshold: true
+
+failure_alert:
+  severity: P1
+  include:
+    - job_name
+    - run_id
+    - failed_step
+    - failure_time
+    - error_summary
+    - retry_status
+
+retry:
+  enabled_for_transient_failures: true
+  max_attempts: 1
+  disabled_for_data_quality_failures: true
+  disabled_for_authentication_failures: true
+
+escalation:
+  first_route: data_engineering_on_call
+  second_route: data_owner
+  escalate_after_failed_retry: true

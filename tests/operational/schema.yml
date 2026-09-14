@@ -1,0 +1,4 @@
+version: 2
+
+# Phase 10.5 operational tests.
+# These are independent from the Phase 9 validation suites.
