@@ -1,0 +1,30 @@
+# Generic CI/CD template.
+# Adapt syntax to the organization's CI platform.
+# Secrets must come from the CI secret store.
+
+steps:
+  - name: install
+    commands:
+      - python -m pip install -r requirements.txt
+      - dbt deps
+
+  - name: validate
+    commands:
+      - dbt debug --target dev
+      - dbt parse --target dev
+      - dbt compile --target dev
+
+  - name: regression
+    commands:
+      - dbt test --select path:tests/dq path:tests/business_key path:tests/hash_key --target dev
+      - dbt test --select path:tests/duplicate_history path:tests/referential_integrity --target dev
+      - dbt test --select path:tests/audit_metadata path:tests/reconciliation_metrics --target dev
+      - dbt test --select path:tests/unit_logic path:tests/e2e_regression --target dev
+
+  - name: deploy
+    commands:
+      - dbt build --target prod
+
+  - name: smoke
+    commands:
+      - dbt test --select path:tests/e2e_regression --target prod

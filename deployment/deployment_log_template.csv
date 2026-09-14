@@ -1,0 +1,1 @@
+deployment_id,timestamp,git_commit,target,catalog,status,dbt_command,validation_status,notes

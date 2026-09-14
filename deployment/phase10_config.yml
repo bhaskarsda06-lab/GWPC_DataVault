@@ -1,0 +1,25 @@
+# Phase 10 deployment configuration template.
+# Review every value before use.
+project_name: GWPC_DataVault
+dbt_target: dev
+
+# Set these in the deployment environment rather than committing secrets.
+databricks:
+  catalog: autdbt_vault_dev
+  staging_schema: autdbtt_autdbts
+  vault_schema: autdbtt
+
+validation:
+  parse: true
+  compile: true
+  run_unit_logic: true
+  run_reconciliation_metrics: true
+  run_referential_integrity: true
+  run_end_to_end_regression: true
+
+# Production values must be supplied by the organization's deployment pipeline.
+production:
+  target: prod
+  catalog: "autdbt_vault_prod"
+  staging_schema: "autdbtt_autdbts"
+  vault_schema: "autdbtt"
