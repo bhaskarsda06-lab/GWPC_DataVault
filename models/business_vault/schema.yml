@@ -1,0 +1,118 @@
+version: 2
+
+models:
+
+  - name: lnk_account_contact
+    description: "Business Vault link between Account and Contact."
+    columns:
+      - name: account_contact_hk
+        description: "Hash key representing Account-Contact relationship."
+        tests:
+          - not_null
+          - unique
+
+      - name: accountpublicid
+        tests:
+          - not_null
+
+      - name: contactpublicid
+        tests:
+          - not_null
+
+  - name: lnk_account_contact_role
+    description: "Business Vault link representing Account-Contact role."
+    columns:
+      - name: account_contact_role_hk
+        tests:
+          - not_null
+          - unique
+
+      - name: accountpublicid
+        tests:
+          - not_null
+
+      - name: contactpublicid
+        tests:
+          - not_null
+
+      - name: rolecode
+        tests:
+          - not_null
+
+  - name: lnk_policy_account
+    description: "Business Vault link between Policy and Account."
+    columns:
+      - name: policy_account_hk
+        tests:
+          - not_null
+          - unique
+
+      - name: policypublicid
+        tests:
+          - not_null
+
+      - name: accountpublicid
+        tests:
+          - not_null
+
+  - name: lnk_policy_contact_role
+    description: "Business Vault link representing Policy-Contact role."
+    columns:
+      - name: policy_contact_role_hk
+        tests:
+          - not_null
+          - unique
+
+      - name: policypublicid
+        tests:
+          - not_null
+
+      - name: contactpublicid
+        tests:
+          - not_null
+
+      - name: rolecode
+        tests:
+          - not_null
+
+  - name: sat_account_contact_role
+    description: "Business Vault satellite containing Account-Contact role attributes."
+    columns:
+      - name: account_contact_role_hk
+        tests:
+          - not_null
+
+      - name: hashdiff
+        tests:
+          - not_null
+
+  - name: sat_policy_contact_role
+    description: "Business Vault satellite containing Policy-Contact role attributes."
+    columns:
+      - name: policy_contact_role_hk
+        tests:
+          - not_null
+
+      - name: hashdiff
+        tests:
+          - not_null
+
+  - name: bridge_policy_account_contact
+    description: "Resolved Policy to Account to Contact relationship."
+    columns:
+      - name: policy_account_contact_hk
+        tests:
+          - not_null
+          - unique
+
+      - name: policypublicid
+        tests:
+          - not_null
+
+      - name: accountpublicid
+        tests:
+          - not_null
+
+      - name: contactpublicid
+        tests:
+          - not_null
