@@ -1,0 +1,43 @@
+name: Promote TEST
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Git commit/tag to promote"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: gwpc-test
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    environment: test
+
+    env:
+      DATABRICKS_AUTH_TYPE: github-oidc
+      DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+
+      - uses: databricks/setup-cli@main
+
+      - name: Validate bundle
+        run: databricks bundle validate --target test
+
+      - name: Deploy TEST
+        run: databricks bundle deploy --target test
+
+      - name: Execute TEST validation
+        run: databricks bundle run gwpc_datavault_production --target test

@@ -1,0 +1,19 @@
+# Phase 7 environment variables
+# Replace values for each Databricks environment.
+
+variables:
+  catalog_name:
+    description: "Unity Catalog target"
+    default: "autdbt_vault_dev"
+
+  schema_name:
+    description: "Target schema"
+    default: "autdbts"
+
+  sql_warehouse_id:
+    description: "Databricks SQL warehouse ID"
+    default: "<REPLACE_WITH_SQL_WAREHOUSE_ID>"
+
+  run_as_service_principal:
+    description: "Production job Run As service principal"
+    default: "<REPLACE_WITH_SERVICE_PRINCIPAL>"

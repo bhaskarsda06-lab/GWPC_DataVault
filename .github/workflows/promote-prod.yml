@@ -1,0 +1,49 @@
+name: Promote PROD
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: "Approved Git tag/commit to deploy"
+        required: true
+        type: string
+      execute_job:
+        description: "Run production Databricks job after deployment"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: gwpc-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: prod
+
+    env:
+      DATABRICKS_AUTH_TYPE: github-oidc
+      DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+      DATABRICKS_CLIENT_ID: ${{ vars.DATABRICKS_CLIENT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref }}
+
+      - uses: databricks/setup-cli@main
+
+      - name: Validate production bundle
+        run: databricks bundle validate --target prod
+
+      - name: Deploy production bundle
+        run: databricks bundle deploy --target prod
+
+      - name: Run production workflow
+        if: ${{ inputs.execute_job }}
+        run: databricks bundle run gwpc_datavault_production --target prod

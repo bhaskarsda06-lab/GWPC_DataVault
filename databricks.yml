@@ -1,0 +1,56 @@
+bundle:
+  name: gwpc_datavault
+
+include:
+  - resources/*.yml
+
+sync:
+  include:
+    - dbt_project.yml
+    - packages.yml
+    - models/**
+    - macros/**
+    - tests/**
+    - sql/**
+    - metadata/**
+    - seeds/**
+    - snapshots/**
+    - config/**
+
+variables:
+  databricks_host:
+    description: "Databricks workspace URL"
+  catalog_name:
+    description: "Unity Catalog catalog"
+  schema_name:
+    description: "Target schema"
+  sql_warehouse_id:
+    description: "Databricks SQL warehouse ID"
+  run_as_service_principal:
+    description: "Databricks service principal application ID"
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: ${var.databricks_host}
+    variables:
+      catalog_name: autdbt_vault_dev
+      schema_name: autdbts
+
+  test:
+    workspace:
+      host: ${var.databricks_host}
+    variables:
+      catalog_name: autdbt_vault_test
+      schema_name: autdbts
+
+  prod:
+    mode: production
+    workspace:
+      host: ${var.databricks_host}
+    variables:
+      catalog_name: autdbt_vault_prod
+      schema_name: autdbts
+      run_as_service_principal: ${var.run_as_service_principal}

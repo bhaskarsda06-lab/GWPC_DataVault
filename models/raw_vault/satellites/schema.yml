@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: sat_account_core
+    description: "Account core descriptive Satellite."
+    columns:
+      - name: account_hk
+        tests: [not_null]
+      - name: load_dts
+        tests: [not_null]
+      - name: hashdiff
+        tests: [not_null]
+
+  - name: sat_account_status
+    description: "Account status descriptive Satellite."
+    columns:
+      - name: account_hk
+        tests: [not_null]
+      - name: load_dts
+        tests: [not_null]
+      - name: hashdiff
+        tests: [not_null]
+
+  - name: sat_contact_details
+    description: "Contact descriptive Satellite."
+    columns:
+      - name: contact_hk
+        tests: [not_null]
+      - name: load_dts
+        tests: [not_null]
+      - name: hashdiff
+        tests: [not_null]
+
+  - name: sat_policy_details
+    description: "Policy-period descriptive Satellite."
+    columns:
+      - name: policy_hk
+        tests: [not_null]
+      - name: load_dts
+        tests: [not_null]
+      - name: hashdiff
+        tests: [not_null]

@@ -1,12 +1,8 @@
-# GWPC Data Vault 2.0 - Phase 1 Foundation
+# GWPC Data Vault - Phase 10
 
-Phase 1 prepares the local development machine, Git repository, Python environment,
-dbt tooling, Databricks CLI, and Databricks DEV catalog/schema.
+End-to-end production validation, failure/restart testing, release evidence,
+smoke testing, idempotency testing and go-live gates.
 
-Phase 1 does NOT create Hubs, Links, or Satellites. Those are created in Phase 2.
-
-Proposed DEV target:
-- Catalog: autdbt_vault_dev
-- Schema: autdbts
-
-Never commit passwords, tokens, service-principal secrets, or profiles.yml.
+This phase validates the implementation built in Phases 1-9. It does not
+claim that an unknown enterprise Databricks workspace has already been
+executed.

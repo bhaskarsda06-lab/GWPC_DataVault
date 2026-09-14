@@ -1,0 +1,95 @@
+# Phase 7 Databricks Declarative Automation Bundle
+# Replace placeholder variables in config/prod/bundle-vars.yml before deployment.
+
+resources:
+  jobs:
+    gwpc_datavault_production:
+      name: GWPC_DataVault_${bundle.target}
+
+      max_concurrent_runs: 1
+
+      parameters:
+        - name: run_mode
+          default: normal
+        - name: restart_stage
+          default: all
+
+      tasks:
+
+        - task_key: bootstrap_control
+          sql_task:
+            file:
+              path: ../sql/phase7_control_bootstrap.sql
+              source: WORKSPACE
+            warehouse_id: ${var.sql_warehouse_id}
+
+        - task_key: stage_staging
+          depends_on:
+            - task_key: bootstrap_control
+          dbt_task:
+            commands:
+              - dbt deps
+              - dbt build --select tag:staging
+            project_directory: ..
+            warehouse_id: ${var.sql_warehouse_id}
+            catalog: ${var.catalog_name}
+            schema: ${var.schema_name}
+
+        - task_key: stage_hubs
+          depends_on:
+            - task_key: stage_staging
+          dbt_task:
+            commands:
+              - dbt build --select tag:hub
+              - dbt test --select path:tests
+            project_directory: ..
+            warehouse_id: ${var.sql_warehouse_id}
+            catalog: ${var.catalog_name}
+            schema: ${var.schema_name}
+
+        - task_key: stage_links
+          depends_on:
+            - task_key: stage_hubs
+          dbt_task:
+            commands:
+              - dbt build --select tag:link
+              - dbt test --select path:tests
+            project_directory: ..
+            warehouse_id: ${var.sql_warehouse_id}
+            catalog: ${var.catalog_name}
+            schema: ${var.schema_name}
+
+        - task_key: stage_satellites
+          depends_on:
+            - task_key: stage_links
+          dbt_task:
+            commands:
+              - dbt build --select tag:satellite
+              - dbt test --select path:tests
+            project_directory: ..
+            warehouse_id: ${var.sql_warehouse_id}
+            catalog: ${var.catalog_name}
+            schema: ${var.schema_name}
+
+        - task_key: stage_reconciliation
+          depends_on:
+            - task_key: stage_satellites
+          dbt_task:
+            commands:
+              - dbt test --select path:tests
+            project_directory: ..
+            warehouse_id: ${var.sql_warehouse_id}
+            catalog: ${var.catalog_name}
+            schema: ${var.schema_name}
+
+        - task_key: finalize_run
+          depends_on:
+            - task_key: stage_reconciliation
+          sql_task:
+            file:
+              path: ../sql/phase7_finalize_run.sql
+              source: WORKSPACE
+            warehouse_id: ${var.sql_warehouse_id}
+
+      run_as:
+        service_principal_name: ${var.run_as_service_principal}
