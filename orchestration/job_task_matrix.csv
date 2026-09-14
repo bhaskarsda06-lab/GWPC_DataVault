@@ -1,0 +1,7 @@
+Task_Order,Task_Name,Dependency,Command_or_Action,Failure_Action
+1,precheck,None,dbt parse --target prod,Stop and alert
+2,dbt_build,precheck,dbt build --target prod,Retry/escalate according to policy
+3,critical_validation,dbt_build,Run critical production tests,Stop and alert
+4,operational_validation,critical_validation,Run Phase 10 operational controls,Stop and alert
+5,audit_evidence,operational_validation,Publish execution evidence,Alert if evidence publication fails
+6,success,all required tasks,Mark run successful,None

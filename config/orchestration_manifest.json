@@ -1,0 +1,24 @@
+{
+  "environment": "prod",
+  "project": "GWPC_DataVault",
+  "target": "prod",
+  "schedule": "<TBD_APPROVED_SCHEDULE>",
+  "timezone": "<TBD>",
+  "max_concurrent_runs": "<TBD>",
+  "timeout_minutes": "<TBD>",
+  "retry_policy": {
+    "max_retries": "<TBD>",
+    "retry_interval_minutes": "<TBD>"
+  },
+  "notifications": {
+    "success": "<TBD>",
+    "failure": "<TBD>"
+  },
+  "tasks": [
+    "precheck",
+    "dbt_build",
+    "critical_validation",
+    "operational_validation",
+    "audit_evidence"
+  ]
+}

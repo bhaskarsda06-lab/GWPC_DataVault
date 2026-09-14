@@ -1,0 +1,8 @@
+Failure_Type,Retry_Recommended,Maximum_Retries,Action,Owner
+Transient platform error,Yes,<TBD>,Retry according to approved policy,Platform
+Source not ready,No,<TBD>,Wait/escalate to upstream owner,Source
+dbt compilation error,No,<TBD>,Fix code and redeploy,Data Engineering
+Data test failure,No,<TBD>,Investigate data/model issue,Data Engineering
+Permission error,No,<TBD>,Resolve identity/grant issue,Platform/Security
+Warehouse unavailable,Yes,<TBD>,Retry after platform recovery,Platform
+Unknown failure,Conditional,<TBD>,Escalate and investigate,Data Engineering

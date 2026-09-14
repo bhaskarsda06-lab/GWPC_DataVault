@@ -1,0 +1,12 @@
+selectors:
+  - name: production_build
+    description: Primary production build using the dbt dependency graph.
+    definition:
+      method: fqn
+      value: "*"
+
+  - name: orchestration_validation
+    description: Phase 11 orchestration validation tests.
+    definition:
+      method: path
+      value: tests/orchestration
