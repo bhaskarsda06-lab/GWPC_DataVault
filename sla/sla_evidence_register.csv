@@ -1,0 +1,4 @@
+Evidence_ID,Metric,Observed_Value,Approved_Target,Status,Run_ID,Reviewer,Reference
+SLA-001,End-to-end build duration,<TBD>,<TBD>,Observed only,<RUN-ID>,<TBD>,<TBD>
+SLA-002,Operational validation duration,<TBD>,<TBD>,Observed only,<RUN-ID>,<TBD>,<TBD>
+SLA-003,Recovery validation duration,<TBD>,<TBD>,Observed only,<RUN-ID>,<TBD>,<TBD>

@@ -1,0 +1,2 @@
+Run_ID,Environment,Git_Commit,Start_Time,End_Time,Duration_Seconds,Models,Tests,Warnings,Errors,Retries,Warehouse_Reference,Data_Volume_Reference,Notes
+RUN-001,prod,<commit>,<start>,<end>,<seconds>,35,296,0,0,0,<warehouse>,<volume>,Initial production baseline

@@ -1,0 +1,7 @@
+Metric,Current_Baseline,Warning_Threshold,Critical_Threshold,Owner,Approval_Reference
+Build duration seconds,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>
+Hub row growth %,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>
+Satellite row growth %,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>
+Link row growth %,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>
+Bridge row growth %,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>
+Warehouse utilization,<TBD>,<TBD>,<TBD>,<TBD>,<TBD>
