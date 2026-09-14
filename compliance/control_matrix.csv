@@ -1,0 +1,9 @@
+Control_ID,Control_Area,Control,Objective,Evidence_Type,Automated_By,Owner,Status
+CTL-001,Deployment,Approved production release,Trace production deployment to approved change,Process,Release process,,
+CTL-002,Testing,Production validation,Demonstrate production tests passed,Technical,dbt,Data Engineering,
+CTL-003,Lineage,Source-to-vault lineage,Trace source data through vault layers,Technical/Documentation,dbt metadata + docs,Data Engineering,
+CTL-004,Security,Least privilege,Restrict production permissions,Administrative,UC review + IAM process,Security,
+CTL-005,Secrets,Secret management,Prevent credentials in source/evidence,Administrative,Secret manager + review,Security,
+CTL-006,Audit,Execution evidence,Retain deployment and validation evidence,Process,Job/dbt logs,Operations,
+CTL-007,Incident,Failure recovery,Trace failure and corrective action,Process,Incident management,Operations,
+CTL-008,Retention,Evidence retention,Apply approved evidence retention policy,Administrative,Records process,Compliance,

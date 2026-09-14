@@ -1,0 +1,6 @@
+Role,Environment,Resource,Access,Reason
+Production Job Identity,prod,autdbt_vault_prod.autdbtt,Controlled write/DDL,Run approved dbt deployment
+Data Engineer,prod,autdbt_vault_prod.autdbtt,Read/controlled change,Production support
+Data Consumer,prod,autdbt_vault_prod.autdbtt,Read,Analytics consumption
+Security Administrator,prod,autdbt_vault_prod,Grant administration,Security governance
+Developer,dev,autdbt_vault_dev,Development access,Development and testing

@@ -1,0 +1,26 @@
+# Phase 10.7 Security Control Template
+# TEMPLATE ONLY. Replace placeholders through your approved IAM/IaC process.
+# Never place credentials or access tokens here.
+
+production:
+  catalog: autdbt_vault_prod
+  vault_schema: autdbtt
+  staging_schema: autdbtt_autdbts
+
+identity:
+  type: service_principal_or_job_identity
+  name: "<APPROVED_PRODUCTION_IDENTITY>"
+
+access_model:
+  ordinary_consumers: read_only
+  transformation_identity: controlled_write
+  security_admin: grant_management
+  platform_admin: infrastructure_management
+
+controls:
+  least_privilege: true
+  environment_separation: true
+  secret_manager_required: true
+  production_write_protected: true
+  audit_logging_required: true
+  change_control_required: true

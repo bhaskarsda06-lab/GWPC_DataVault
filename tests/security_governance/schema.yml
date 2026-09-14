@@ -1,0 +1,4 @@
+version: 2
+
+# Phase 10.7 security/governance validation tests.
+# Permission grants themselves require authorized Unity Catalog metadata review.

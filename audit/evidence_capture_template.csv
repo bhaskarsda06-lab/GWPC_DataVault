@@ -1,0 +1,6 @@
+Evidence_ID,Phase,Environment,Evidence_Type,Command_or_Query,Execution_Time,Git_Commit,Result,Reviewer,Change_or_Incident_Ref,Repository_Location
+EVD-001,10.8,prod,dbt_version,dbt --version,,,,,,
+EVD-002,10.8,prod,production_debug,dbt debug --target prod,,,,,,
+EVD-003,10.8,prod,production_parse,dbt parse --target prod,,,,,,
+EVD-004,10.8,prod,smoke_tests,dbt test --target prod --select path:tests/smoke_production,,,,,,
+EVD-005,10.8,prod,operational_tests,dbt test --target prod --select path:tests/operational,,,,,,

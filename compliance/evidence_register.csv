@@ -1,0 +1,9 @@
+Evidence_ID,Control_ID,Evidence,Source,Required,Location,Reviewer,Status
+EVD-001,CTL-001,Approved change reference,Change management system,Yes,,,Pending
+EVD-002,CTL-002,Production test results,dbt logs,Yes,,,Pending
+EVD-003,CTL-003,Lineage map/dbt metadata,dbt + documentation,Yes,,,Pending
+EVD-004,CTL-004,Unity Catalog access review,Databricks metadata,Yes,,,Pending
+EVD-005,CTL-005,Secret-management confirmation,Security process,Yes,,,Pending
+EVD-006,CTL-006,Production run evidence,Job/dbt logs,Yes,,,Pending
+EVD-007,CTL-007,Incident evidence when applicable,Incident system,Conditional,,,Pending
+EVD-008,CTL-008,Retention-policy reference,Records process,Yes,,,Pending
