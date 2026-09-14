@@ -1,6 +1,50 @@
 version: 2
 
 models:
+
+  - name: stg_account
+    tests:
+      - reconciliation_source_staging:
+          source_table: "{{ source('gwpc', 'pc_account_curr') }}"
+          source_key: publicid
+          staging_key: publicid
+
+  - name: stg_contact
+    tests:
+      - reconciliation_source_staging:
+          source_table: "{{ source('gwpc', 'pc_contact_curr') }}"
+          source_key: publicid
+          staging_key: publicid
+
+  - name: stg_policy
+    tests:
+      - reconciliation_source_staging:
+          source_table: "{{ source('gwpc', 'pc_policy_curr') }}"
+          source_key: publicid
+          staging_key: publicid
+
+  - name: stg_accountcontact
+    tests:
+      - reconciliation_source_staging:
+          source_table: "{{ source('gwpc', 'pc_accountcontact_curr') }}"
+          source_key: publicid
+          staging_key: publicid
+
+  - name: stg_accountcontactrole
+    tests:
+      - reconciliation_source_staging:
+          source_table: "{{ source('gwpc', 'pc_accountcontactrole_curr') }}"
+          source_key: publicid
+          staging_key: publicid
+
+  - name: stg_policycontactrole
+    tests:
+      - reconciliation_source_staging:
+          source_table: "{{ source('gwpc', 'pc_policycontactrole_curr') }}"
+          source_key: publicid
+          staging_key: publicid
+
+
   - name: stg_account
     description: "Filtered GWPC account source."
     columns:

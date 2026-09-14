@@ -7,6 +7,8 @@ WITH policy_account AS (
 
     SELECT
         policy_account_hk,
+        policy_hk,
+        account_hk,
         policypublicid,
         accountpublicid
     FROM {{ ref('lnk_policy_account') }}
@@ -17,6 +19,8 @@ policy_contact AS (
 
     SELECT
         policy_contact_role_hk,
+        policy_hk,
+        contact_hk,
         policypublicid,
         contactpublicid,
         rolecode
@@ -27,7 +31,6 @@ policy_contact AS (
 SELECT
 
     pa.policy_account_hk,
-
     pcr.policy_contact_role_hk,
 
     sha2(
@@ -36,10 +39,15 @@ SELECT
             pa.policypublicid,
             pa.accountpublicid,
             pcr.contactpublicid,
+            pcr.rolecode,
             'GWPC'
         ),
         256
     ) AS policy_account_contact_hk,
+
+    pa.policy_hk,
+    pa.account_hk,
+    pcr.contact_hk,
 
     pa.policypublicid,
     pa.accountpublicid,
@@ -51,4 +59,4 @@ SELECT
 FROM policy_account pa
 
 INNER JOIN policy_contact pcr
-    ON pa.policypublicid = pcr.policypublicid
+    ON pa.policy_hk = pcr.policy_hk

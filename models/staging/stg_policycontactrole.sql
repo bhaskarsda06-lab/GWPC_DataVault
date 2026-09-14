@@ -1,6 +1,14 @@
-{{ config(materialized='view') }}
+{{ config(
+    materialized='view',
+    tags=['staging', 'policy', 'contact']
+) }}
 
-select *
-from {{ source('gwpc', 'pc_policycontactrole_curr') }}
-where retired = 0
-  and coalesce(trim(publicid), '') <> ''
+SELECT
+    publicid,
+    policypublicid,
+    contactpublicid,
+    rolecode,
+    createddate,
+    updateddate,
+    retired
+FROM {{ source('gwpc', 'pc_policycontactrole_curr') }}

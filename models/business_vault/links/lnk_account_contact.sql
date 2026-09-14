@@ -6,12 +6,6 @@
 WITH source_data AS (
 
     SELECT
-        ac.publicid,
-        ac.accountpublicid,
-        ac.contactpublicid,
-        ac.createddate,
-        ac.updateddate,
-
         sha2(
             concat_ws(
                 '|',
@@ -22,54 +16,47 @@ WITH source_data AS (
             256
         ) AS account_contact_hk,
 
-        sha2(
-            concat_ws(
-                '|',
-                ac.accountpublicid,
-                ac.contactpublicid,
-                'GWPC'
-            ),
-            256
-        ) AS link_hashkey,
+        ha.account_hk,
+        hc.contact_hk,
+
+        ac.accountpublicid,
+        ac.contactpublicid,
 
         current_timestamp() AS load_dts
 
     FROM {{ ref('stg_accountcontact') }} ac
 
+    INNER JOIN {{ ref('hub_account') }} ha
+        ON ha.source_system_unique_identifier =
+           ac.accountpublicid
+       AND ha.source_system_name = 'GWPC'
+
+    INNER JOIN {{ ref('hub_contact') }} hc
+        ON hc.source_system_unique_identifier =
+           ac.contactpublicid
+       AND hc.source_system_name = 'GWPC'
+
     WHERE COALESCE(TRIM(ac.accountpublicid), '') <> ''
       AND COALESCE(TRIM(ac.contactpublicid), '') <> ''
-),
-
-deduplicated AS (
-
-    SELECT *
-    FROM (
-        SELECT
-            *,
-            ROW_NUMBER() OVER (
-                PARTITION BY account_contact_hk
-                ORDER BY updateddate DESC, createddate DESC
-            ) AS rn
-        FROM source_data
-    )
-    WHERE rn = 1
 )
 
 SELECT
     account_contact_hk,
-    account_contact_hk AS link_hashkey,
+    account_hk,
+    contact_hk,
     accountpublicid,
     contactpublicid,
     load_dts
 
-FROM deduplicated
+FROM source_data
 
 {% if is_incremental() %}
 
 WHERE NOT EXISTS (
     SELECT 1
     FROM {{ this }} t
-    WHERE t.account_contact_hk = deduplicated.account_contact_hk
+    WHERE t.account_contact_hk =
+          source_data.account_contact_hk
 )
 
 {% endif %}
