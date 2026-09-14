@@ -1,8 +1,17 @@
 version: 2
 
 models:
+
   - name: hub_account
     description: "Raw Vault Account Hub."
+    tests:
+      - reconciliation_staging_hub:
+          arguments:
+            staging_model: stg_account
+            staging_key: publicid
+            hub_key: account_hk
+            hub_business_key: source_system_unique_identifier
+            source_system: GWPC
     columns:
       - name: account_hk
         tests: [not_null, unique]
@@ -17,6 +26,14 @@ models:
 
   - name: hub_contact
     description: "Raw Vault Contact Hub."
+    tests:
+      - reconciliation_staging_hub:
+          arguments:
+            staging_model: stg_contact
+            staging_key: publicid
+            hub_key: contact_hk
+            hub_business_key: source_system_unique_identifier
+            source_system: GWPC
     columns:
       - name: contact_hk
         tests: [not_null, unique]
@@ -31,6 +48,14 @@ models:
 
   - name: hub_policy
     description: "Raw Vault Policy Hub."
+    tests:
+      - reconciliation_staging_hub:
+          arguments:
+            staging_model: stg_policy
+            staging_key: policynumber
+            hub_key: policy_hk
+            hub_business_key: policy_number
+            source_system: GWPC
     columns:
       - name: policy_hk
         tests: [not_null, unique]
