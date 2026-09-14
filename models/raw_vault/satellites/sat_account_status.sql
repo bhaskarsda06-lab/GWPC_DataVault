@@ -4,36 +4,38 @@
 ) }}
 
 WITH source_data AS (
+
     SELECT
         sha2(
-            concat_ws('|',
+            concat_ws(
+                '|',
                 a.PublicID,
                 a.AccountNumber,
                 'GWPC'
-            ), 256
+            ),
+            256
         ) AS account_hk,
 
-        s.TYPECODE AS account_status_code,
+        a.Status AS account_status_code,
 
         current_timestamp() AS load_dts,
 
         sha2(
-            concat_ws('|',
-                coalesce(s.TYPECODE, '')
-            ), 256
+            concat_ws(
+                '|',
+                coalesce(a.Status, '')
+            ),
+            256
         ) AS hashdiff
 
     FROM {{ source('gwpc', 'pc_account_curr') }} a
 
-    LEFT JOIN {{ source('gwpc', 'pctl_accountstatus_curr') }} s
-        ON a.AccountStatus = s.ID
-       AND COALESCE(s.Retired, 0) = 0
-
     WHERE COALESCE(a.Retired, 0) = 0
-      AND COALESCE(a.PublicID, '') <> ''
+      AND COALESCE(TRIM(a.PublicID), '') <> ''
 ),
 
 deduplicated AS (
+
     SELECT *
     FROM (
         SELECT
@@ -52,13 +54,16 @@ SELECT
     account_status_code,
     load_dts,
     hashdiff
+
 FROM deduplicated
 
 {% if is_incremental() %}
+
 WHERE NOT EXISTS (
     SELECT 1
     FROM {{ this }} t
     WHERE t.account_hk = deduplicated.account_hk
       AND t.hashdiff = deduplicated.hashdiff
 )
+
 {% endif %}
