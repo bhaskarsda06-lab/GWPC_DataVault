@@ -1,0 +1,4 @@
+version: 2
+
+# Phase 10.4 production smoke-test metadata.
+# Test SQL files are intentionally independent of Phase 9 tests.
