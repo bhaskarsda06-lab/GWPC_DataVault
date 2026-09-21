@@ -3,34 +3,33 @@ import json
 import os
 import tarfile
 import tempfile
-from datetime import datetime, timezone
 
 import requests
 from databricks.sdk import WorkspaceClient
 
 
-# ---------------------------------------------------------
+# ============================================================
 # Configuration
-# ---------------------------------------------------------
+# ============================================================
 
-STATE_ROOT = "/Volumes/audtdbt_vault_prod/audtdbtt/dbt_state"
+STATE_DIR = "/Volumes/audtdbt_vault_prod/audtdbtt/dbt_state"
 
 MANIFEST_FILE = os.path.join(
-    STATE_ROOT,
+    STATE_DIR,
     "manifest.json"
 )
 
 RUN_RESULTS_FILE = os.path.join(
-    STATE_ROOT,
+    STATE_DIR,
     "run_results.json"
 )
 
-DBT_TASK_KEY = "dbt_build"
+DBT_BUILD_TASK_KEY = "dbt_build"
 
 
-# ---------------------------------------------------------
+# ============================================================
 # Arguments
-# ---------------------------------------------------------
+# ============================================================
 
 def parse_args():
 
@@ -49,9 +48,26 @@ def parse_args():
     return parser.parse_args()
 
 
-# ---------------------------------------------------------
-# Safe tar extraction
-# ---------------------------------------------------------
+# ============================================================
+# Find manifest.json + run_results.json
+# ============================================================
+
+def find_state_directory(extract_dir):
+
+    for root, _, files in os.walk(extract_dir):
+
+        if (
+            "manifest.json" in files
+            and "run_results.json" in files
+        ):
+            return root
+
+    return None
+
+
+# ============================================================
+# Safe extraction
+# ============================================================
 
 def safe_extract(tar, destination):
 
@@ -76,27 +92,9 @@ def safe_extract(tar, destination):
     tar.extractall(destination)
 
 
-# ---------------------------------------------------------
-# Find dbt state directory
-# ---------------------------------------------------------
-
-def find_state_directory(extract_dir):
-
-    for root, _, files in os.walk(extract_dir):
-
-        if (
-            "manifest.json" in files
-            and
-            "run_results.json" in files
-        ):
-            return root
-
-    return None
-
-
-# ---------------------------------------------------------
+# ============================================================
 # Find previous dbt_build task
-# ---------------------------------------------------------
+# ============================================================
 
 def find_previous_dbt_build(
     workspace,
@@ -104,7 +102,7 @@ def find_previous_dbt_build(
     current_run_id
 ):
 
-    print("Searching previous dbt_build run...")
+    print("Searching for previous dbt_build...")
 
     runs = workspace.jobs.list_runs(
         job_id=job_id,
@@ -113,59 +111,58 @@ def find_previous_dbt_build(
         limit=20
     )
 
-    for run in runs:
+    for job_run in runs:
 
-        parent_run_id = int(run.run_id)
+        parent_run_id = int(job_run.run_id)
 
-        # Ignore current job run
+        # Do not use current job run
         if parent_run_id == current_run_id:
             continue
 
-        for task in (run.tasks or []):
+        for task in (job_run.tasks or []):
 
-            if task.task_key != DBT_TASK_KEY:
+            if task.task_key != DBT_BUILD_TASK_KEY:
                 continue
 
             if not task.run_id:
                 continue
 
             print(
-                f"Found previous dbt_build:"
-                f" task_run_id={task.run_id},"
-                f" job_run_id={parent_run_id}"
+                f"Previous dbt_build found:"
+                f" job_run_id={parent_run_id},"
+                f" task_run_id={task.run_id}"
             )
 
-            return (
-                int(task.run_id),
-                parent_run_id
-            )
+            return int(task.run_id)
 
     return None
 
 
-# ---------------------------------------------------------
+# ============================================================
 # Download dbt artifacts
-# ---------------------------------------------------------
+# ============================================================
 
 def download_dbt_artifacts(
     workspace,
-    task_run_id
+    dbt_task_run_id
 ):
 
     print(
         f"Getting dbt output for task run "
-        f"{task_run_id}"
+        f"{dbt_task_run_id}..."
     )
 
     output = workspace.jobs.get_run_output(
-        run_id=task_run_id
+        run_id=dbt_task_run_id
     )
 
     if not output.dbt_output:
 
-        raise RuntimeError(
-            "dbt_output was not returned."
+        print(
+            "No dbt_output found."
         )
+
+        return None
 
     artifacts_link = (
         output.dbt_output.artifacts_link
@@ -173,9 +170,11 @@ def download_dbt_artifacts(
 
     if not artifacts_link:
 
-        raise RuntimeError(
-            "dbt artifact link was not returned."
+        print(
+            "No dbt artifact link found."
         )
+
+        return None
 
     headers = (
         output.dbt_output.artifacts_headers
@@ -194,20 +193,17 @@ def download_dbt_artifacts(
 
     print(
         f"Downloaded "
-        f"{len(response.content):,} bytes"
+        f"{len(response.content):,} bytes."
     )
 
     return response.content
 
 
-# ---------------------------------------------------------
-# Put latest state into Volume
-# ---------------------------------------------------------
+# ============================================================
+# Copy ONLY manifest.json and run_results.json
+# ============================================================
 
-def save_latest_state(
-    artifact_bytes,
-    parent_run_id
-):
+def copy_required_state(artifact_bytes):
 
     with tempfile.TemporaryDirectory() as temp_dir:
 
@@ -233,6 +229,8 @@ def save_latest_state(
             exist_ok=True
         )
 
+        print("Extracting dbt artifacts...")
+
         with tarfile.open(
             archive_file,
             "r:gz"
@@ -243,26 +241,19 @@ def save_latest_state(
                 extract_dir
             )
 
-        state_directory = (
-            find_state_directory(
-                extract_dir
-            )
+        state_directory = find_state_directory(
+            extract_dir
         )
 
         if not state_directory:
 
-            raise RuntimeError(
+            print(
                 "manifest.json and "
-                "run_results.json "
-                "were not found."
+                "run_results.json were not found."
             )
 
-        print(
-            f"dbt state found at: "
-            f"{state_directory}"
-        )
+            return False
 
-        # Only copy required state files
         manifest_source = os.path.join(
             state_directory,
             "manifest.json"
@@ -273,14 +264,15 @@ def save_latest_state(
             "run_results.json"
         )
 
+        # Make sure Volume directory exists
         os.makedirs(
-            STATE_ROOT,
+            STATE_DIR,
             exist_ok=True
         )
 
-        # -------------------------------------------------
-        # Override latest state
-        # -------------------------------------------------
+        # ----------------------------------------------------
+        # Copy manifest.json
+        # ----------------------------------------------------
 
         with open(
             manifest_source,
@@ -295,6 +287,14 @@ def save_latest_state(
                 destination.write(
                     source.read()
                 )
+
+        print(
+            "Copied manifest.json to Volume."
+        )
+
+        # ----------------------------------------------------
+        # Copy run_results.json
+        # ----------------------------------------------------
 
         with open(
             run_results_source,
@@ -311,35 +311,28 @@ def save_latest_state(
                 )
 
         print(
-            "Latest dbt state saved to Volume."
+            "Copied run_results.json to Volume."
         )
 
-        print(
-            f"manifest.json    : {MANIFEST_FILE}"
-        )
-
-        print(
-            f"run_results.json : {RUN_RESULTS_FILE}"
-        )
+        return True
 
 
-# ---------------------------------------------------------
-# Read run_results.json from Volume
-# ---------------------------------------------------------
+# ============================================================
+# Decide FULL_BUILD or RETRY
+# ============================================================
 
 def decide_run_mode():
 
     print("=" * 60)
-    print("Reading dbt state from Volume")
+    print("Reading run_results.json from Volume")
     print("=" * 60)
 
-    # No manifest
     if not os.path.isfile(
         MANIFEST_FILE
     ):
 
         print(
-            "manifest.json: NOT FOUND"
+            "manifest.json not found."
         )
 
         print(
@@ -348,13 +341,12 @@ def decide_run_mode():
 
         return "FULL_BUILD"
 
-    # No run results
     if not os.path.isfile(
         RUN_RESULTS_FILE
     ):
 
         print(
-            "run_results.json: NOT FOUND"
+            "run_results.json not found."
         )
 
         print(
@@ -362,14 +354,6 @@ def decide_run_mode():
         )
 
         return "FULL_BUILD"
-
-    print(
-        "manifest.json: FOUND"
-    )
-
-    print(
-        "run_results.json: FOUND"
-    )
 
     with open(
         RUN_RESULTS_FILE,
@@ -387,7 +371,7 @@ def decide_run_mode():
     if not results:
 
         print(
-            "No results found."
+            "No results found in run_results.json."
         )
 
         print(
@@ -434,14 +418,14 @@ def decide_run_mode():
         f"SKIPPED       : {skipped_count}"
     )
 
-    # Everything succeeded
+    # Everything successful
     if all(
         status == "success"
         for status in statuses
     ):
 
         print(
-            "Previous dbt run = SUCCESS"
+            "Previous dbt run was successful."
         )
 
         print(
@@ -450,7 +434,7 @@ def decide_run_mode():
 
         return "FULL_BUILD"
 
-    # Error or skipped exists
+    # ERROR or SKIPPED exists
     print(
         "Previous dbt run contains "
         "ERROR/SKIPPED."
@@ -463,9 +447,9 @@ def decide_run_mode():
     return "RETRY"
 
 
-# ---------------------------------------------------------
+# ============================================================
 # Main
-# ---------------------------------------------------------
+# ============================================================
 
 def main():
 
@@ -491,64 +475,104 @@ def main():
         f"Current Run ID : {current_run_id}"
     )
 
+    print(
+        f"Volume         : {STATE_DIR}"
+    )
+
     workspace = WorkspaceClient()
 
-    # -----------------------------------------------------
+    # --------------------------------------------------------
     # Find previous dbt_build
-    # -----------------------------------------------------
+    # --------------------------------------------------------
 
-    previous = find_previous_dbt_build(
+    dbt_task_run_id = find_previous_dbt_build(
         workspace,
         job_id,
         current_run_id
     )
 
-    # -----------------------------------------------------
-    # First ever run
-    # -----------------------------------------------------
+    # --------------------------------------------------------
+    # First run / no previous dbt_build
+    # --------------------------------------------------------
 
-    if not previous:
+    if not dbt_task_run_id:
 
         print(
             "No previous dbt_build found."
         )
 
-        print(
-            "Decision: FULL_BUILD"
-        )
+        run_mode = "FULL_BUILD"
 
         dbutils.jobs.taskValues.set(
             key="run_mode",
-            value="FULL_BUILD"
+            value=run_mode
+        )
+
+        print(
+            f"RUN MODE = {run_mode}"
         )
 
         return
 
-    task_run_id, parent_run_id = previous
+    # --------------------------------------------------------
+    # Get previous dbt artifacts
+    # --------------------------------------------------------
 
-    # -----------------------------------------------------
-    # Bring previous dbt artifacts
-    # -----------------------------------------------------
+    artifact_bytes = download_dbt_artifacts(
+        workspace,
+        dbt_task_run_id
+    )
 
-    artifact_bytes = (
-        download_dbt_artifacts(
-            workspace,
-            task_run_id
+    # --------------------------------------------------------
+    # If artifacts unavailable
+    # --------------------------------------------------------
+
+    if not artifact_bytes:
+
+        print(
+            "Previous dbt artifacts unavailable."
         )
+
+        run_mode = "FULL_BUILD"
+
+        dbutils.jobs.taskValues.set(
+            key="run_mode",
+            value=run_mode
+        )
+
+        print(
+            f"RUN MODE = {run_mode}"
+        )
+
+        return
+
+    # --------------------------------------------------------
+    # Copy ONLY manifest + run_results to Volume
+    # --------------------------------------------------------
+
+    copied = copy_required_state(
+        artifact_bytes
     )
 
-    # -----------------------------------------------------
-    # Put latest manifest + results in Volume
-    # -----------------------------------------------------
+    if not copied:
 
-    save_latest_state(
-        artifact_bytes,
-        parent_run_id
-    )
+        print(
+            "Required state files could not "
+            "be copied."
+        )
 
-    # -----------------------------------------------------
+        run_mode = "FULL_BUILD"
+
+        dbutils.jobs.taskValues.set(
+            key="run_mode",
+            value=run_mode
+        )
+
+        return
+
+    # --------------------------------------------------------
     # Read Volume and decide
-    # -----------------------------------------------------
+    # --------------------------------------------------------
 
     run_mode = decide_run_mode()
 
@@ -559,7 +583,7 @@ def main():
 
     print("=" * 60)
     print(
-        f"FINAL RUN MODE: {run_mode}"
+        f"FINAL RUN MODE = {run_mode}"
     )
     print("=" * 60)
 
