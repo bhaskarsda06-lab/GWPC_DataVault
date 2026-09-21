@@ -1,5 +1,4 @@
 import argparse
-import io
 import os
 import tarfile
 import tempfile
@@ -8,10 +7,19 @@ import requests
 from databricks.sdk import WorkspaceClient
 
 
+# ============================================================
+# Configuration
+# ============================================================
+
 STATE_VOLUME = "/Volumes/audtdbt_vault_prod/audtdbtt/dbt_state"
 
 
+# ============================================================
+# Arguments
+# ============================================================
+
 def parse_args():
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -23,16 +31,27 @@ def parse_args():
     return parser.parse_args()
 
 
+# ============================================================
+# Safe TAR extraction
+# ============================================================
+
 def safe_extract(tar, destination):
+
     destination = os.path.abspath(destination)
 
     for member in tar.getmembers():
 
         member_path = os.path.abspath(
-            os.path.join(destination, member.name)
+            os.path.join(
+                destination,
+                member.name
+            )
         )
 
-        if not member_path.startswith(destination + os.sep):
+        if not member_path.startswith(
+            destination + os.sep
+        ):
+
             raise RuntimeError(
                 f"Unsafe archive path detected: {member.name}"
             )
@@ -40,24 +59,38 @@ def safe_extract(tar, destination):
     tar.extractall(destination)
 
 
+# ============================================================
+# Find dbt state directory
+# ============================================================
+
 def find_state_directory(extract_dir):
 
-    for root, _, files in os.walk(extract_dir):
+    for root, _, files in os.walk(
+        extract_dir
+    ):
 
         if (
             "manifest.json" in files
-            and "run_results.json" in files
+            and
+            "run_results.json" in files
         ):
+
             return root
 
     return None
 
 
-def upload_directory(workspace, local_dir):
+# ============================================================
+# Upload files to Unity Catalog Volume
+# ============================================================
+
+def upload_directory(local_dir):
 
     uploaded = []
 
-    for root, _, files in os.walk(local_dir):
+    for root, _, files in os.walk(
+        local_dir
+    ):
 
         for filename in files:
 
@@ -74,10 +107,15 @@ def upload_directory(workspace, local_dir):
             volume_file = os.path.join(
                 STATE_VOLUME,
                 relative_path
-            ).replace("\\", "/")
+            ).replace(
+                "\\",
+                "/"
+            )
 
-            # Only create a subdirectory when one is actually needed.
-            # Do NOT create STATE_VOLUME itself.
+            # ------------------------------------------------
+            # Create child directories if required
+            # ------------------------------------------------
+
             relative_parent = os.path.dirname(
                 relative_path
             )
@@ -87,26 +125,37 @@ def upload_directory(workspace, local_dir):
                 volume_parent = os.path.join(
                     STATE_VOLUME,
                     relative_parent
-                ).replace("\\", "/")
+                ).replace(
+                    "\\",
+                    "/"
+                )
 
-                workspace.files.create_directory(
-                    volume_parent
+                os.makedirs(
+                    volume_parent,
+                    exist_ok=True
                 )
 
             print(
                 f"Uploading: {relative_path}"
             )
 
+            # ------------------------------------------------
+            # Write directly to Unity Catalog Volume
+            # ------------------------------------------------
+
             with open(
                 local_file,
                 "rb"
-            ) as file:
+            ) as source:
 
-                workspace.files.upload(
+                with open(
                     volume_file,
-                    io.BytesIO(file.read()),
-                    overwrite=True
-                )
+                    "wb"
+                ) as destination:
+
+                    destination.write(
+                        source.read()
+                    )
 
             uploaded.append(
                 relative_path
@@ -114,6 +163,10 @@ def upload_directory(workspace, local_dir):
 
     return uploaded
 
+
+# ============================================================
+# Main
+# ============================================================
 
 def main():
 
@@ -123,26 +176,36 @@ def main():
         args.dbt_task_run_id
     )
 
+    print("")
     print(
-        "========================================"
+        "============================================================"
     )
     print(
         "Preparing dbt retry state"
     )
     print(
-        "========================================"
+        "============================================================"
     )
 
     print(
         f"dbt task run ID: {task_run_id}"
     )
 
+    print(
+        f"Target Volume: {STATE_VOLUME}"
+    )
+
+    # ========================================================
+    # 1. Create Databricks SDK client
+    # ========================================================
+
     workspace = WorkspaceClient()
 
-    # ---------------------------------------------------------
-    # 1. Get dbt task output
-    # ---------------------------------------------------------
+    # ========================================================
+    # 2. Get dbt task output
+    # ========================================================
 
+    print("")
     print(
         "Getting dbt task output..."
     )
@@ -172,10 +235,11 @@ def main():
         or {}
     )
 
-    # ---------------------------------------------------------
-    # 2. Download dbt artifact archive
-    # ---------------------------------------------------------
+    # ========================================================
+    # 3. Download dbt artifact archive
+    # ========================================================
 
+    print("")
     print(
         "Downloading dbt artifact archive..."
     )
@@ -194,9 +258,9 @@ def main():
         f"Downloaded {len(artifact_bytes):,} bytes."
     )
 
-    # ---------------------------------------------------------
-    # 3. Extract locally
-    # ---------------------------------------------------------
+    # ========================================================
+    # 4. Extract dbt artifacts locally
+    # ========================================================
 
     with tempfile.TemporaryDirectory() as temp_dir:
 
@@ -224,6 +288,7 @@ def main():
             exist_ok=True
         )
 
+        print("")
         print(
             "Extracting dbt artifacts..."
         )
@@ -238,9 +303,9 @@ def main():
                 extract_dir
             )
 
-        # -----------------------------------------------------
-        # 4. Find dbt state
-        # -----------------------------------------------------
+        # ====================================================
+        # 5. Find dbt state directory
+        # ====================================================
 
         state_directory = (
             find_state_directory(
@@ -256,16 +321,12 @@ def main():
             )
 
         print(
-            f"State directory found:"
+            f"State directory found: {state_directory}"
         )
 
-        print(
-            state_directory
-        )
-
-        # -----------------------------------------------------
-        # 5. Validate required files
-        # -----------------------------------------------------
+        # ====================================================
+        # 6. Validate required state files
+        # ====================================================
 
         manifest_path = os.path.join(
             state_directory,
@@ -293,6 +354,7 @@ def main():
                 "run_results.json not found."
             )
 
+        print("")
         print(
             "Required dbt state files found:"
         )
@@ -305,32 +367,32 @@ def main():
             "  run_results.json"
         )
 
-        # -----------------------------------------------------
-        # 6. Upload state files to existing Volume
-        # -----------------------------------------------------
+        # ====================================================
+        # 7. Upload state to Volume
+        # ====================================================
 
+        print("")
         print(
             "Uploading dbt state to Volume..."
         )
 
         uploaded = upload_directory(
-            workspace,
             state_directory
         )
 
-        # -----------------------------------------------------
-        # 7. Final validation
-        # -----------------------------------------------------
+        # ====================================================
+        # 8. Final validation
+        # ====================================================
 
         print("")
         print(
-            "========================================"
+            "============================================================"
         )
         print(
             "dbt retry state prepared successfully"
         )
         print(
-            "========================================"
+            "============================================================"
         )
 
         print(
@@ -347,6 +409,10 @@ def main():
                 f"  {file}"
             )
 
+
+# ============================================================
+# Entry point
+# ============================================================
 
 if __name__ == "__main__":
 
