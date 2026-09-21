@@ -137,15 +137,6 @@ def check_dbt_model_status(file_path):
     # 7. Set Databricks task value
     # --------------------------------------------------------
 
-    print(f"\nFINAL DBT DECISION = {decision}")
-
-    dbutils.jobs.taskValues.set(
-        key="dbt_decision",
-        value=decision
-    )
-
-    print("Task value 'dbt_decision' successfully set.")
-
     return decision
 
 
@@ -155,6 +146,11 @@ def check_dbt_model_status(file_path):
 
 decision = check_dbt_model_status(
     RUN_RESULTS_FILE
+)
+
+dbutils.jobs.taskValues.set(
+    key="dbt_decision",
+    value=decision
 )
 
 print(
