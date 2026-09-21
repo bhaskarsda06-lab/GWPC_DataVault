@@ -22,7 +22,7 @@ models:
       +schema: autdbts
       +tags: ["staging"]
  vars:
-  dbt_artifacts_database: autdbt_vault
+  dbt_artifacts_database: autdbt_vault_prod
   dbt_artifacts_schema: dbt_artifacts     
       
       
