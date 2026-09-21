@@ -15,14 +15,13 @@ clean-targets:
   - target
   - dbt_packages
 
+vars:
+  dbt_artifacts_database: autdbt_vault_prod
+  dbt_artifacts_schema: dbt_artifacts
+
 models:
   gwpc_datavault:
     staging:
       +materialized: view
       +schema: autdbts
       +tags: ["staging"]
- vars:
-  dbt_artifacts_database: autdbt_vault_prod
-  dbt_artifacts_schema: dbt_artifacts     
-      
-      
