@@ -12,7 +12,7 @@ from databricks.sdk import WorkspaceClient
 # Configuration
 # ============================================================
 
-STATE_DIR = "/Volumes/audtdbt_vault_prod/audtdbtt/dbt_state"
+STATE_DIR = "/Volumes/autdbt_vault_prod/autdbtt/dbt_state"
 
 MANIFEST_FILE = os.path.join(
     STATE_DIR,
