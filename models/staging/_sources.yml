@@ -3,8 +3,8 @@ version: 2
 sources:
   - name: gwpc
     description: "GWPC source tables used by the Data Vault implementation."
-    database: autdbt_vault_dev
-    schema: autdbts
+    database: gw
+    schema: silver_dv
     tables:
       - name: pc_account_curr
       - name: pc_contact_curr
