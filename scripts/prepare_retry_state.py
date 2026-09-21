@@ -8,7 +8,7 @@ import requests
 from databricks.sdk import WorkspaceClient
 
 
-STATE_VOLUME = "/Volumes/audtdbt_vault_prod/audtdbt/dbt_state"
+STATE_VOLUME = "/Volumes/audtdbt_vault_prod/audtdbtt/dbt_state"
 
 
 def parse_args():
