@@ -1,6 +1,7 @@
 packages:
   - package: Datavault-UK/automate_dv
     version: 0.11.5
+  packages:
   - package: brooklyn-data/dbt_artifacts
-    version: 2.13.0 # Use the latest version compatible with your dbt Core version
+    version: 2.11.0
     
