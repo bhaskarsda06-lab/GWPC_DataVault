@@ -1,171 +1,158 @@
 import argparse
 import io
 import os
-import shutil
 import tarfile
 import tempfile
-from pathlib import Path
-
 import requests
+
 from databricks.sdk import WorkspaceClient
 
 
-STATE_VOLUME = "dbfs:/Volumes/audtdbt_vault_prod/audtdbt/dbt_state"
-LOCAL_STATE = "/local_disk0/dbt_retry_state"
+STATE_VOLUME = "/Volumes/audtdbt_vault_prod/audtdbt/dbt_state"
+STATE_ARCHIVE = f"{STATE_VOLUME}/dbt-output.tar.gz"
 
 
-def get_artifact_url(task_run_id: int):
-    """
-    Get the archived dbt artifacts URL from the individual dbt task run.
-    """
-    w = WorkspaceClient()
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dbt-task-run-id",
+        required=True,
+        help="Individual dbt task run ID from the upstream dbt_build task",
+    )
+    return parser.parse_args()
 
-    output = w.jobs.get_run_output(run_id=task_run_id)
 
-    if output.dbt_output is None:
+def safe_extract(tar, destination):
+    destination = os.path.abspath(destination)
+
+    for member in tar.getmembers():
+        member_path = os.path.abspath(
+            os.path.join(destination, member.name)
+        )
+
+        if not member_path.startswith(destination + os.sep):
+            raise RuntimeError(
+                f"Unsafe archive path detected: {member.name}"
+            )
+
+    tar.extractall(destination)
+
+
+def main():
+    args = parse_args()
+
+    task_run_id = int(args.dbt_task_run_id)
+
+    print(f"Getting dbt task output for run ID: {task_run_id}")
+
+    # Databricks SDK uses the job/task identity for authentication.
+    workspace = WorkspaceClient()
+
+    output = workspace.jobs.get_run_output(
+        run_id=task_run_id
+    )
+
+    if not output.dbt_output:
         raise RuntimeError(
-            f"Run {task_run_id} does not contain dbt_output."
+            "No dbt_output was returned for the dbt_build task."
         )
 
     artifacts_link = output.dbt_output.artifacts_link
 
     if not artifacts_link:
         raise RuntimeError(
-            f"No artifacts_link returned for dbt task run {task_run_id}."
+            "dbt_output.artifacts_link was not returned."
         )
 
-    headers = {}
+    headers = output.dbt_output.artifacts_headers or {}
 
-    if output.dbt_output.artifacts_headers:
-        headers.update(output.dbt_output.artifacts_headers)
-
-    return artifacts_link, headers
-
-
-def download_and_extract(url, headers):
-    """
-    Download dbt-output.tar.gz and extract it to local disk.
-    """
-    if os.path.exists(LOCAL_STATE):
-        shutil.rmtree(LOCAL_STATE)
-
-    os.makedirs(LOCAL_STATE, exist_ok=True)
-
-    print("Downloading dbt artifacts...")
+    print("Downloading dbt artifact archive...")
 
     response = requests.get(
-        url,
+        artifacts_link,
         headers=headers,
         timeout=300,
     )
 
     response.raise_for_status()
 
-    print(f"Downloaded {len(response.content):,} bytes")
+    artifact_bytes = response.content
 
-    with tarfile.open(
-        fileobj=io.BytesIO(response.content),
-        mode="r:gz",
-    ) as tar:
-        tar.extractall(LOCAL_STATE)
-
-    print(f"Artifacts extracted to: {LOCAL_STATE}")
-
-
-def find_state_directory():
-    """
-    Find the directory containing manifest.json and run_results.json.
-    """
-    manifest = None
-    run_results = None
-
-    for root, _, files in os.walk(LOCAL_STATE):
-        if "manifest.json" in files:
-            manifest = Path(root) / "manifest.json"
-
-        if "run_results.json" in files:
-            run_results = Path(root) / "run_results.json"
-
-        if manifest and run_results:
-            return manifest.parent
-
-    raise RuntimeError(
-        "Could not find both manifest.json and run_results.json "
-        f"under {LOCAL_STATE}"
+    print(
+        f"Downloaded {len(artifact_bytes):,} bytes of dbt artifacts."
     )
 
+    # Validate the archive before storing it.
+    with tempfile.TemporaryDirectory() as temp_dir:
 
-def copy_to_volume(state_directory):
-    """
-    Copy the state directory into the Unity Catalog Volume.
-    """
-    from pyspark.sql import SparkSession
+        archive_path = os.path.join(
+            temp_dir,
+            "dbt-output.tar.gz"
+        )
 
-    spark = SparkSession.builder.getOrCreate()
+        with open(archive_path, "wb") as file:
+            file.write(artifact_bytes)
 
-    # dbutils is available through the Spark JVM on Databricks.
-    from pyspark.dbutils import DBUtils
+        extract_dir = os.path.join(
+            temp_dir,
+            "extracted"
+        )
 
-    dbutils = DBUtils(spark)
+        os.makedirs(extract_dir, exist_ok=True)
 
-    print(f"Cleaning previous state from: {STATE_VOLUME}")
+        with tarfile.open(
+            archive_path,
+            mode="r:gz"
+        ) as tar:
 
-    try:
-        dbutils.fs.rm(STATE_VOLUME, True)
-    except Exception:
-        pass
+            safe_extract(
+                tar,
+                extract_dir
+            )
 
-    dbutils.fs.mkdirs(STATE_VOLUME)
+        manifest_found = False
+        run_results_found = False
 
-    print(f"Copying dbt state to: {STATE_VOLUME}")
+        for root, _, files in os.walk(extract_dir):
 
-    dbutils.fs.cp(
-        f"file:{state_directory}",
-        STATE_VOLUME,
-        True,
+            if "manifest.json" in files:
+                manifest_found = True
+
+            if "run_results.json" in files:
+                run_results_found = True
+
+        if not manifest_found:
+            raise RuntimeError(
+                "manifest.json was not found in the dbt artifact archive."
+            )
+
+        if not run_results_found:
+            raise RuntimeError(
+                "run_results.json was not found in the dbt artifact archive."
+            )
+
+        print("Validated dbt artifacts:")
+        print(f"  manifest.json   : {manifest_found}")
+        print(f"  run_results.json: {run_results_found}")
+
+    # Ensure the Volume directory exists.
+    workspace.files.create_directory(
+        STATE_VOLUME
     )
 
-    print("State copied successfully.")
-
-
-def main():
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        "--dbt-task-run-id",
-        required=True,
-        type=int,
-        help="Individual Databricks task run ID for dbt_build",
+    # Upload the complete dbt artifact archive.
+    print(
+        f"Uploading archive to:\n{STATE_ARCHIVE}"
     )
 
-    args = parser.parse_args()
-
-    print("=" * 70)
-    print("Preparing dbt retry state")
-    print("=" * 70)
-
-    print(f"dbt_build task run ID: {args.dbt_task_run_id}")
-
-    artifacts_url, headers = get_artifact_url(
-        args.dbt_task_run_id
+    workspace.files.upload(
+        STATE_ARCHIVE,
+        io.BytesIO(artifact_bytes),
+        overwrite=True,
     )
 
-    download_and_extract(
-        artifacts_url,
-        headers,
-    )
-
-    state_directory = find_state_directory()
-
-    print(f"Found dbt state directory: {state_directory}")
-
-    copy_to_volume(
-        state_directory,
-    )
-
-    print("=" * 70)
-    print("dbt retry state prepared successfully")
-    print("=" * 70)
+    print("dbt retry state successfully saved.")
+    print(f"State archive: {STATE_ARCHIVE}")
 
 
 if __name__ == "__main__":
