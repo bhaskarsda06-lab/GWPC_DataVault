@@ -9,16 +9,17 @@ from databricks.sdk import WorkspaceClient
 
 
 STATE_VOLUME = "/Volumes/audtdbt_vault_prod/audtdbt/dbt_state"
-STATE_ARCHIVE = f"{STATE_VOLUME}/dbt-output.tar.gz"
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
+
     parser.add_argument(
         "--dbt-task-run-id",
         required=True,
-        help="Individual dbt task run ID from the upstream dbt_build task",
+        help="Individual dbt task run ID from dbt_build",
     )
+
     return parser.parse_args()
 
 
@@ -26,6 +27,7 @@ def safe_extract(tar, destination):
     destination = os.path.abspath(destination)
 
     for member in tar.getmembers():
+
         member_path = os.path.abspath(
             os.path.join(destination, member.name)
         )
@@ -38,33 +40,97 @@ def safe_extract(tar, destination):
     tar.extractall(destination)
 
 
+def find_state_directory(extract_dir):
+    for root, _, files in os.walk(extract_dir):
+
+        if (
+            "manifest.json" in files
+            and "run_results.json" in files
+        ):
+            return root
+
+    return None
+
+
+def upload_directory(workspace, local_dir):
+    uploaded = []
+
+    for root, _, files in os.walk(local_dir):
+
+        for filename in files:
+
+            local_file = os.path.join(
+                root,
+                filename
+            )
+
+            relative_path = os.path.relpath(
+                local_file,
+                local_dir
+            )
+
+            volume_file = os.path.join(
+                STATE_VOLUME,
+                relative_path
+            ).replace("\\", "/")
+
+            parent_dir = os.path.dirname(volume_file)
+
+            workspace.files.create_directory(
+                parent_dir
+            )
+
+            with open(local_file, "rb") as file:
+
+                workspace.files.upload(
+                    volume_file,
+                    io.BytesIO(file.read()),
+                    overwrite=True,
+                )
+
+            uploaded.append(relative_path)
+
+    return uploaded
+
+
 def main():
+
     args = parse_args()
 
     task_run_id = int(args.dbt_task_run_id)
 
-    print(f"Getting dbt task output for run ID: {task_run_id}")
+    print(
+        f"Getting dbt output for task run ID: {task_run_id}"
+    )
 
-    # Databricks SDK uses the job/task identity for authentication.
     workspace = WorkspaceClient()
+
+    # ---------------------------------------------------------
+    # 1. Get output from the failed dbt_build task
+    # ---------------------------------------------------------
 
     output = workspace.jobs.get_run_output(
         run_id=task_run_id
     )
 
     if not output.dbt_output:
+
         raise RuntimeError(
-            "No dbt_output was returned for the dbt_build task."
+            "No dbt_output returned from dbt_build."
         )
 
     artifacts_link = output.dbt_output.artifacts_link
 
     if not artifacts_link:
+
         raise RuntimeError(
-            "dbt_output.artifacts_link was not returned."
+            "dbt artifact download link was not returned."
         )
 
-    headers = output.dbt_output.artifacts_headers or {}
+    headers = (
+        output.dbt_output.artifacts_headers
+        or {}
+    )
 
     print("Downloading dbt artifact archive...")
 
@@ -79,10 +145,13 @@ def main():
     artifact_bytes = response.content
 
     print(
-        f"Downloaded {len(artifact_bytes):,} bytes of dbt artifacts."
+        f"Downloaded {len(artifact_bytes):,} bytes."
     )
 
-    # Validate the archive before storing it.
+    # ---------------------------------------------------------
+    # 2. Extract artifacts locally
+    # ---------------------------------------------------------
+
     with tempfile.TemporaryDirectory() as temp_dir:
 
         archive_path = os.path.join(
@@ -90,7 +159,11 @@ def main():
             "dbt-output.tar.gz"
         )
 
-        with open(archive_path, "wb") as file:
+        with open(
+            archive_path,
+            "wb"
+        ) as file:
+
             file.write(artifact_bytes)
 
         extract_dir = os.path.join(
@@ -98,11 +171,16 @@ def main():
             "extracted"
         )
 
-        os.makedirs(extract_dir, exist_ok=True)
+        os.makedirs(
+            extract_dir,
+            exist_ok=True
+        )
+
+        print("Extracting dbt artifacts...")
 
         with tarfile.open(
             archive_path,
-            mode="r:gz"
+            "r:gz"
         ) as tar:
 
             safe_extract(
@@ -110,49 +188,84 @@ def main():
                 extract_dir
             )
 
-        manifest_found = False
-        run_results_found = False
+        # -----------------------------------------------------
+        # 3. Find directory containing dbt state
+        # -----------------------------------------------------
 
-        for root, _, files in os.walk(extract_dir):
+        state_directory = find_state_directory(
+            extract_dir
+        )
 
-            if "manifest.json" in files:
-                manifest_found = True
+        if not state_directory:
 
-            if "run_results.json" in files:
-                run_results_found = True
-
-        if not manifest_found:
             raise RuntimeError(
-                "manifest.json was not found in the dbt artifact archive."
+                "Could not find a directory containing "
+                "both manifest.json and run_results.json."
             )
 
-        if not run_results_found:
-            raise RuntimeError(
-                "run_results.json was not found in the dbt artifact archive."
+        print(
+            f"dbt state directory found:\n{state_directory}"
+        )
+
+        # -----------------------------------------------------
+        # 4. Create Volume directory
+        # -----------------------------------------------------
+
+        workspace.files.create_directory(
+            STATE_VOLUME
+        )
+
+        # -----------------------------------------------------
+        # 5. Upload actual dbt state files
+        # -----------------------------------------------------
+
+        uploaded = upload_directory(
+            workspace,
+            state_directory
+        )
+
+        # -----------------------------------------------------
+        # 6. Validate uploaded state
+        # -----------------------------------------------------
+
+        required_files = [
+            "manifest.json",
+            "run_results.json",
+        ]
+
+        for required_file in required_files:
+
+            local_required = os.path.join(
+                state_directory,
+                required_file
             )
 
-        print("Validated dbt artifacts:")
-        print(f"  manifest.json   : {manifest_found}")
-        print(f"  run_results.json: {run_results_found}")
+            if not os.path.exists(
+                local_required
+            ):
 
-    # Ensure the Volume directory exists.
-    workspace.files.create_directory(
-        STATE_VOLUME
-    )
+                raise RuntimeError(
+                    f"Required file missing: {required_file}"
+                )
 
-    # Upload the complete dbt artifact archive.
-    print(
-        f"Uploading archive to:\n{STATE_ARCHIVE}"
-    )
+        print("")
+        print("========================================")
+        print("dbt retry state prepared successfully")
+        print("========================================")
 
-    workspace.files.upload(
-        STATE_ARCHIVE,
-        io.BytesIO(artifact_bytes),
-        overwrite=True,
-    )
+        print(
+            f"State location: {STATE_VOLUME}"
+        )
 
-    print("dbt retry state successfully saved.")
-    print(f"State archive: {STATE_ARCHIVE}")
+        print(
+            f"Files uploaded: {len(uploaded)}"
+        )
+
+        for file in uploaded:
+
+            print(
+                f"  {file}"
+            )
 
 
 if __name__ == "__main__":
