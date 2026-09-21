@@ -32,7 +32,6 @@ DBT_BUILD_TASK_KEY = "dbt_build"
 # ============================================================
 
 def parse_args():
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -49,7 +48,7 @@ def parse_args():
 
 
 # ============================================================
-# Find manifest.json + run_results.json
+# Find manifest.json and run_results.json
 # ============================================================
 
 def find_state_directory(extract_dir):
@@ -66,7 +65,7 @@ def find_state_directory(extract_dir):
 
 
 # ============================================================
-# Safe extraction
+# Safe TAR extraction
 # ============================================================
 
 def safe_extract(tar, destination):
@@ -113,9 +112,11 @@ def find_previous_dbt_build(
 
     for job_run in runs:
 
-        parent_run_id = int(job_run.run_id)
+        parent_run_id = int(
+            job_run.run_id
+        )
 
-        # Do not use current job run
+        # Do not use the current job run
         if parent_run_id == current_run_id:
             continue
 
@@ -128,9 +129,15 @@ def find_previous_dbt_build(
                 continue
 
             print(
-                f"Previous dbt_build found:"
-                f" job_run_id={parent_run_id},"
-                f" task_run_id={task.run_id}"
+                "Previous dbt_build found:"
+            )
+
+            print(
+                f"  Job Run ID  : {parent_run_id}"
+            )
+
+            print(
+                f"  Task Run ID : {task.run_id}"
             )
 
             return int(task.run_id)
@@ -159,7 +166,7 @@ def download_dbt_artifacts(
     if not output.dbt_output:
 
         print(
-            "No dbt_output found."
+            "No dbt_output returned."
         )
 
         return None
@@ -171,7 +178,7 @@ def download_dbt_artifacts(
     if not artifacts_link:
 
         print(
-            "No dbt artifact link found."
+            "No dbt artifact link returned."
         )
 
         return None
@@ -181,7 +188,9 @@ def download_dbt_artifacts(
         or {}
     )
 
-    print("Downloading dbt artifacts...")
+    print(
+        "Downloading dbt artifacts..."
+    )
 
     response = requests.get(
         artifacts_link,
@@ -215,9 +224,11 @@ def copy_required_state(artifact_bytes):
         with open(
             archive_file,
             "wb"
-        ) as f:
+        ) as file:
 
-            f.write(artifact_bytes)
+            file.write(
+                artifact_bytes
+            )
 
         extract_dir = os.path.join(
             temp_dir,
@@ -229,7 +240,9 @@ def copy_required_state(artifact_bytes):
             exist_ok=True
         )
 
-        print("Extracting dbt artifacts...")
+        print(
+            "Extracting dbt artifacts..."
+        )
 
         with tarfile.open(
             archive_file,
@@ -241,8 +254,10 @@ def copy_required_state(artifact_bytes):
                 extract_dir
             )
 
-        state_directory = find_state_directory(
-            extract_dir
+        state_directory = (
+            find_state_directory(
+                extract_dir
+            )
         )
 
         if not state_directory:
@@ -264,11 +279,9 @@ def copy_required_state(artifact_bytes):
             "run_results.json"
         )
 
-        # Make sure Volume directory exists
-        os.makedirs(
-            STATE_DIR,
-            exist_ok=True
-        )
+        # IMPORTANT:
+        # Do NOT create STATE_DIR.
+        # The Unity Catalog Volume already exists.
 
         # ----------------------------------------------------
         # Copy manifest.json
@@ -289,7 +302,7 @@ def copy_required_state(artifact_bytes):
                 )
 
         print(
-            "Copied manifest.json to Volume."
+            "manifest.json copied to Volume."
         )
 
         # ----------------------------------------------------
@@ -311,7 +324,7 @@ def copy_required_state(artifact_bytes):
                 )
 
         print(
-            "Copied run_results.json to Volume."
+            "run_results.json copied to Volume."
         )
 
         return True
@@ -324,15 +337,21 @@ def copy_required_state(artifact_bytes):
 def decide_run_mode():
 
     print("=" * 60)
-    print("Reading run_results.json from Volume")
+    print(
+        "Reading run_results.json from Volume"
+    )
     print("=" * 60)
+
+    # --------------------------------------------------------
+    # No manifest
+    # --------------------------------------------------------
 
     if not os.path.isfile(
         MANIFEST_FILE
     ):
 
         print(
-            "manifest.json not found."
+            "manifest.json: NOT FOUND"
         )
 
         print(
@@ -340,13 +359,17 @@ def decide_run_mode():
         )
 
         return "FULL_BUILD"
+
+    # --------------------------------------------------------
+    # No run_results
+    # --------------------------------------------------------
 
     if not os.path.isfile(
         RUN_RESULTS_FILE
     ):
 
         print(
-            "run_results.json not found."
+            "run_results.json: NOT FOUND"
         )
 
         print(
@@ -355,13 +378,25 @@ def decide_run_mode():
 
         return "FULL_BUILD"
 
+    print(
+        "manifest.json: FOUND"
+    )
+
+    print(
+        "run_results.json: FOUND"
+    )
+
+    # --------------------------------------------------------
+    # Read run_results.json
+    # --------------------------------------------------------
+
     with open(
         RUN_RESULTS_FILE,
         "r",
         encoding="utf-8"
-    ) as f:
+    ) as file:
 
-        run_results = json.load(f)
+        run_results = json.load(file)
 
     results = run_results.get(
         "results",
@@ -371,7 +406,7 @@ def decide_run_mode():
     if not results:
 
         print(
-            "No results found in run_results.json."
+            "run_results.json contains no results."
         )
 
         print(
@@ -379,6 +414,10 @@ def decide_run_mode():
         )
 
         return "FULL_BUILD"
+
+    # --------------------------------------------------------
+    # Get statuses
+    # --------------------------------------------------------
 
     statuses = [
         str(
@@ -418,14 +457,17 @@ def decide_run_mode():
         f"SKIPPED       : {skipped_count}"
     )
 
-    # Everything successful
+    # --------------------------------------------------------
+    # Previous run completely successful
+    # --------------------------------------------------------
+
     if all(
         status == "success"
         for status in statuses
     ):
 
         print(
-            "Previous dbt run was successful."
+            "Previous dbt run was SUCCESS."
         )
 
         print(
@@ -434,7 +476,10 @@ def decide_run_mode():
 
         return "FULL_BUILD"
 
-    # ERROR or SKIPPED exists
+    # --------------------------------------------------------
+    # Previous run has ERROR/SKIPPED
+    # --------------------------------------------------------
+
     print(
         "Previous dbt run contains "
         "ERROR/SKIPPED."
@@ -481,9 +526,9 @@ def main():
 
     workspace = WorkspaceClient()
 
-    # --------------------------------------------------------
+    # ========================================================
     # Find previous dbt_build
-    # --------------------------------------------------------
+    # ========================================================
 
     dbt_task_run_id = find_previous_dbt_build(
         workspace,
@@ -491,9 +536,9 @@ def main():
         current_run_id
     )
 
-    # --------------------------------------------------------
+    # ========================================================
     # First run / no previous dbt_build
-    # --------------------------------------------------------
+    # ========================================================
 
     if not dbt_task_run_id:
 
@@ -514,23 +559,27 @@ def main():
 
         return
 
-    # --------------------------------------------------------
-    # Get previous dbt artifacts
-    # --------------------------------------------------------
+    # ========================================================
+    # Download previous dbt artifacts
+    # ========================================================
 
     artifact_bytes = download_dbt_artifacts(
         workspace,
         dbt_task_run_id
     )
 
-    # --------------------------------------------------------
-    # If artifacts unavailable
-    # --------------------------------------------------------
+    # ========================================================
+    # If artifacts cannot be obtained
+    # ========================================================
 
     if not artifact_bytes:
 
         print(
             "Previous dbt artifacts unavailable."
+        )
+
+        print(
+            "Decision: FULL_BUILD"
         )
 
         run_mode = "FULL_BUILD"
@@ -540,15 +589,11 @@ def main():
             value=run_mode
         )
 
-        print(
-            f"RUN MODE = {run_mode}"
-        )
-
         return
 
-    # --------------------------------------------------------
-    # Copy ONLY manifest + run_results to Volume
-    # --------------------------------------------------------
+    # ========================================================
+    # Copy ONLY manifest + run_results
+    # ========================================================
 
     copied = copy_required_state(
         artifact_bytes
@@ -557,8 +602,12 @@ def main():
     if not copied:
 
         print(
-            "Required state files could not "
-            "be copied."
+            "Required dbt state could not "
+            "be copied to Volume."
+        )
+
+        print(
+            "Decision: FULL_BUILD"
         )
 
         run_mode = "FULL_BUILD"
@@ -570,9 +619,9 @@ def main():
 
         return
 
-    # --------------------------------------------------------
+    # ========================================================
     # Read Volume and decide
-    # --------------------------------------------------------
+    # ========================================================
 
     run_mode = decide_run_mode()
 
@@ -587,6 +636,10 @@ def main():
     )
     print("=" * 60)
 
+
+# ============================================================
+# Entry point
+# ============================================================
 
 if __name__ == "__main__":
     main()
