@@ -1,0 +1,10 @@
+gwpc_datavault:
+  outputs:
+    ci:
+      type: databricks
+      catalog: autdbt_vault_prod
+      schema: autdbtt
+      host: mock-databricks.cloud.databricks.com
+      http_path: /sql/1.0/warehouses/mock
+      token: mock_token_for_ci_validation
+  target: ci
