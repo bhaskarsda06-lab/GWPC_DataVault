@@ -1,6 +1,10 @@
 import sys
 import json
 from datetime import datetime
+from pyspark.sql.types import (
+    StringType, FloatType, IntegerType, TimestampType,
+    StructType, StructField
+)
 
 
 # ============================================================
@@ -180,14 +184,16 @@ manifest_record = [(
 )]
 
 
+manifest_schema = StructType([
+    StructField("invocation_id", StringType(), True),
+    StructField("artifact_type", StringType(), True),
+    StructField("artifact_json", StringType(), True),
+    StructField("load_timestamp", TimestampType(), True),
+])
+
 manifest_df = spark.createDataFrame(
     manifest_record,
-    [
-        "invocation_id",
-        "artifact_type",
-        "artifact_json",
-        "load_timestamp"
-    ]
+    manifest_schema
 )
 
 
@@ -208,12 +214,7 @@ run_results_record = [(
 
 run_results_df = spark.createDataFrame(
     run_results_record,
-    [
-        "invocation_id",
-        "artifact_type",
-        "artifact_json",
-        "load_timestamp"
-    ]
+    manifest_schema
 )
 
 
@@ -421,32 +422,34 @@ summary_record = [(
 )]
 
 
+summary_schema = StructType([
+    StructField("invocation_id", StringType(), True),
+    StructField("job_id", StringType(), True),
+    StructField("job_run_id", StringType(), True),
+    StructField("task_run_id", StringType(), True),
+    StructField("dbt_command", StringType(), True),
+    StructField("dbt_version", StringType(), True),
+    StructField("invocation_started_at", TimestampType(), True),
+    StructField("invocation_completed_at", TimestampType(), True),
+    StructField("elapsed_time", FloatType(), True),
+    StructField("models_total", IntegerType(), True),
+    StructField("models_success", IntegerType(), True),
+    StructField("models_failed", IntegerType(), True),
+    StructField("models_skipped", IntegerType(), True),
+    StructField("models_warn", IntegerType(), True),
+    StructField("tests_total", IntegerType(), True),
+    StructField("tests_pass", IntegerType(), True),
+    StructField("tests_fail", IntegerType(), True),
+    StructField("tests_warn", IntegerType(), True),
+    StructField("tests_skipped", IntegerType(), True),
+    StructField("overall_status", StringType(), True),
+    StructField("error_message", StringType(), True),
+    StructField("loaded_at", TimestampType(), True),
+])
+
 summary_df = spark.createDataFrame(
     summary_record,
-    [
-        "invocation_id",
-        "job_id",
-        "job_run_id",
-        "task_run_id",
-        "dbt_command",
-        "dbt_version",
-        "invocation_started_at",
-        "invocation_completed_at",
-        "elapsed_time",
-        "models_total",
-        "models_success",
-        "models_failed",
-        "models_skipped",
-        "models_warn",
-        "tests_total",
-        "tests_pass",
-        "tests_fail",
-        "tests_warn",
-        "tests_skipped",
-        "overall_status",
-        "error_message",
-        "loaded_at"
-    ]
+    summary_schema
 )
 
 
@@ -552,25 +555,27 @@ print(
 )
 
 
+model_executions_schema = StructType([
+    StructField("invocation_id", StringType(), True),
+    StructField("resource_type", StringType(), True),
+    StructField("unique_id", StringType(), True),
+    StructField("resource_name", StringType(), True),
+    StructField("status", StringType(), True),
+    StructField("execution_time", FloatType(), True),
+    StructField("compile_started_at", TimestampType(), True),
+    StructField("compile_completed_at", TimestampType(), True),
+    StructField("execute_started_at", TimestampType(), True),
+    StructField("execute_completed_at", TimestampType(), True),
+    StructField("adapter_message", StringType(), True),
+    StructField("query_id", StringType(), True),
+    StructField("failures", IntegerType(), True),
+    StructField("message", StringType(), True),
+    StructField("loaded_at", TimestampType(), True),
+])
+
 model_executions_df = spark.createDataFrame(
     model_execution_records,
-    [
-        "invocation_id",
-        "resource_type",
-        "unique_id",
-        "resource_name",
-        "status",
-        "execution_time",
-        "compile_started_at",
-        "compile_completed_at",
-        "execute_started_at",
-        "execute_completed_at",
-        "adapter_message",
-        "query_id",
-        "failures",
-        "message",
-        "loaded_at"
-    ]
+    model_executions_schema
 )
 
 
