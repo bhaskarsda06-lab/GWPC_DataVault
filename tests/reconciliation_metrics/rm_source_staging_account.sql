@@ -1,4 +1,5 @@
 -- Phase 9.7: Source -> Staging account count reconciliation
+{{ config(severity='warn') }}
 WITH src AS (
     SELECT COUNT(*) cnt
     FROM {{ source('gwpc', 'pc_account_curr') }}

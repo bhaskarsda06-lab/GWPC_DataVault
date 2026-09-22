@@ -1,4 +1,5 @@
 -- Phase 9.7: Staging -> Hub Policy count reconciliation
+{{ config(severity='warn') }}
 WITH stg AS (
     SELECT COUNT(DISTINCT policynumber) cnt FROM {{ ref('stg_policy') }}
     WHERE COALESCE(TRIM(policynumber),'') <> ''

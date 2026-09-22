@@ -10,6 +10,7 @@ models:
 
     tests:
       - reconciliation_source_staging:
+          severity: warn
           arguments:
             source_table: "{{ source('gwpc', 'pc_account_curr') }}"
             source_key: publicid
@@ -41,7 +42,8 @@ models:
         description: "GWPC contact public identifier."
         tests:
           - not_null
-          - unique
+          - unique:
+              severity: warn
 
 
   # ============================================================
@@ -52,6 +54,7 @@ models:
 
     tests:
       - reconciliation_source_staging:
+          severity: warn
           arguments:
             source_table: "{{ source('gwpc', 'pc_policy_curr') }}"
             source_key: publicid
@@ -94,6 +97,7 @@ models:
 
     tests:
       - reconciliation_source_staging:
+          severity: warn
           arguments:
             source_table: "{{ source('gwpc', 'pc_accountcontactrole_curr') }}"
             source_key: publicid

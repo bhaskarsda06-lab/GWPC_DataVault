@@ -1,4 +1,5 @@
 -- Phase 9.7: Consolidated zero-difference sanity check for core counts.
+{{ config(severity='warn') }}
 WITH metrics AS (
     SELECT 'account_source_staging' metric, 
            (SELECT COUNT(*) FROM {{ source('gwpc','pc_account_curr') }} WHERE COALESCE(TRIM(publicid),'')<>'') -

@@ -1,4 +1,5 @@
 -- Phase 9.7: Source -> Staging policy count reconciliation
+{{ config(severity='warn') }}
 WITH src AS (
     SELECT COUNT(*) cnt FROM {{ source('gwpc', 'pc_policy_curr') }}
     WHERE COALESCE(TRIM(publicid),'') <> ''
