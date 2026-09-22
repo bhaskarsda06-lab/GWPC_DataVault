@@ -8,7 +8,7 @@ from datetime import datetime
 # ============================================================
 
 CATALOG = "autdbt_vault_prod"
-SCHEMA = "audbtt"
+SCHEMA = "autdbtt"
 
 MANIFEST_TABLE = f"{CATALOG}.{SCHEMA}.dbt_manifest_artifacts"
 RUN_RESULTS_TABLE = f"{CATALOG}.{SCHEMA}.dbt_run_results_artifacts"
