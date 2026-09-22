@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from pyspark.sql import Row
+<<<<<<< HEAD
 from pyspark.sql import SparkSession
 from pyspark.sql.types import (
     DoubleType,
@@ -16,7 +17,75 @@ from pyspark.sql.types import (
     StructField,
     StructType,
     TimestampType,
+=======
+from pyspark.sql.types import (
+    StructType, StructField,
+    StringType, DoubleType, LongType,
+    IntegerType, TimestampType, ArrayType,
 )
+
+
+MANIFEST_FILE = (
+    "/Volumes/autdbt_vault_prod/"
+    "autdbtt/dbt_state/manifest.json"
+)
+
+RUN_RESULTS_FILE = (
+    "/Volumes/autdbt_vault_prod/"
+    "autdbtt/dbt_state/run_results.json"
+)
+
+MANIFEST_TABLE = (
+    "autdbt_vault_prod.control.dbt_manifest"
+)
+
+RUN_RESULTS_TABLE = (
+    "autdbt_vault_prod.control.dbt_run_results"
+>>>>>>> fdd6530beba5696d9701606e77068092d2a8c2de
+)
+
+MANIFEST_SCHEMA = StructType([
+    StructField("invocation_id", StringType(), True),
+    StructField("generated_at", TimestampType(), True),
+    StructField("node_id", StringType(), True),
+    StructField("resource_type", StringType(), True),
+    StructField("package_name", StringType(), True),
+    StructField("name", StringType(), True),
+    StructField("database_name", StringType(), True),
+    StructField("schema_name", StringType(), True),
+    StructField("alias_name", StringType(), True),
+    StructField("relation_name", StringType(), True),
+    StructField("materialized", StringType(), True),
+    StructField("path", StringType(), True),
+    StructField("original_file_path", StringType(), True),
+    StructField("unique_id", StringType(), True),
+    StructField("depends_on_nodes", ArrayType(StringType()), True),
+    StructField("raw_code", StringType(), True),
+    StructField("compiled_code", StringType(), True),
+    StructField("checksum", StringType(), True),
+    StructField("tags", ArrayType(StringType()), True),
+    StructField("loaded_at", TimestampType(), True),
+])
+
+RUN_RESULTS_SCHEMA = StructType([
+    StructField("invocation_id", StringType(), True),
+    StructField("generated_at", TimestampType(), True),
+    StructField("unique_id", StringType(), True),
+    StructField("resource_type", StringType(), True),
+    StructField("status", StringType(), True),
+    StructField("execution_time", DoubleType(), True),
+    StructField("thread_id", StringType(), True),
+    StructField("node_name", StringType(), True),
+    StructField("database_name", StringType(), True),
+    StructField("schema_name", StringType(), True),
+    StructField("message", StringType(), True),
+    StructField("rows_affected", LongType(), True),
+    StructField("adapter_response", StringType(), True),
+    StructField("failures", IntegerType(), True),
+    StructField("run_started_at", TimestampType(), True),
+    StructField("run_completed_at", TimestampType(), True),
+    StructField("loaded_at", TimestampType(), True),
+])
 
 
 # ============================================================
@@ -239,7 +308,16 @@ def build_manifest_rows(
             )
         )
 
+<<<<<<< HEAD
     return rows
+=======
+    df = spark.createDataFrame(rows, schema=MANIFEST_SCHEMA)
+
+    df.write \
+        .format("delta") \
+        .mode("append") \
+        .saveAsTable(MANIFEST_TABLE)
+>>>>>>> fdd6530beba5696d9701606e77068092d2a8c2de
 
 
 # ============================================================
@@ -300,7 +378,11 @@ def build_run_results_rows(
             )
         )
 
+<<<<<<< HEAD
     return rows
+=======
+    df = spark.createDataFrame(rows, schema=RUN_RESULTS_SCHEMA)
+>>>>>>> fdd6530beba5696d9701606e77068092d2a8c2de
 
 
 # ============================================================
@@ -428,6 +510,7 @@ def load_run_results(
     return len(rows)
 
 
+<<<<<<< HEAD
 # ============================================================
 # Main
 # ============================================================
@@ -482,3 +565,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+=======
+load_manifest()
+load_run_results()
+>>>>>>> fdd6530beba5696d9701606e77068092d2a8c2de

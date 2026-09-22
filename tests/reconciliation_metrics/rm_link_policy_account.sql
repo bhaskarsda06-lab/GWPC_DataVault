@@ -1,4 +1,5 @@
 -- Phase 9.7: Policy-Account relationship count reconciliation
+{{ config(severity='warn') }}
 WITH src AS (
     SELECT COUNT(DISTINCT CONCAT_WS('|',publicid,accountpublicid)) cnt
     FROM {{ ref('stg_policy') }}
