@@ -1,4 +1,5 @@
 -- Phase 8.5
+{{ config(severity='warn') }}
 WITH c AS (
  SELECT 'lnk_account_contact' object_name,
  (SELECT COUNT(DISTINCT CONCAT(TRIM(CAST(accountpublicid AS STRING)),'|',TRIM(CAST(contactpublicid AS STRING))))

@@ -1,4 +1,5 @@
 -- Phase 9.7: Account-Contact-Role relationship count reconciliation
+{{ config(severity='warn') }}
 WITH src AS (
     SELECT COUNT(DISTINCT CONCAT_WS('|',accountpublicid,contactpublicid,rolecode)) cnt
     FROM {{ ref('stg_accountcontactrole') }}

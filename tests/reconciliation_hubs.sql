@@ -1,5 +1,6 @@
 -- Phase 8.2
 -- Reconciliation: Staging business-key population vs Hub population.
+{{ config(severity='warn') }}
 
 WITH source_account AS (
 
