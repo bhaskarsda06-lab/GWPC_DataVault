@@ -2,7 +2,7 @@ import json
 import os
 
 # ============================================================
-# CONFIGURATION
+# CONFIG
 # ============================================================
 
 RUN_RESULTS_FILE = (
@@ -11,142 +11,118 @@ RUN_RESULTS_FILE = (
 
 
 # ============================================================
-# CHECK DBT MODEL STATUS
-# ============================================================
-
-def check_dbt_model_status(file_path):
-
-    # --------------------------------------------------------
-    # 1. run_results.json does not exist
-    # --------------------------------------------------------
-
-    if not os.path.exists(file_path):
-
-        print("run_results.json not found")
-        print("Decision = dbt_build")
-
-        return "dbt_build"
-
-
-    # --------------------------------------------------------
-    # 2. Read run_results.json
-    # --------------------------------------------------------
-
-    try:
-
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-    except Exception as e:
-
-        print(f"Unable to read run_results.json: {e}")
-        print("Decision = dbt_build")
-
-        return "dbt_build"
-
-
-    # --------------------------------------------------------
-    # 3. Get results
-    # --------------------------------------------------------
-
-    results = data.get("results", [])
-
-    if not results:
-
-        print("No results found")
-        print("Decision = dbt_build")
-
-        return "dbt_build"
-
-
-    # --------------------------------------------------------
-    # 4. Check ONLY models
-    # --------------------------------------------------------
-
-    failed_models = []
-
-    for result in results:
-
-        unique_id = result.get("unique_id", "")
-        status = result.get("status", "").lower()
-
-        # Only model.*
-        if unique_id.startswith("model."):
-
-            model_name = unique_id.split(".")[-1]
-
-            print(
-                f"MODEL   = {model_name} "
-                f"| STATUS = {status}"
-            )
-
-            # Only model error/fail matters
-            if status in ("error", "fail"):
-
-                failed_models.append({
-                    "unique_id": unique_id,
-                    "model_name": model_name,
-                    "status": status
-                })
-
-
-    # --------------------------------------------------------
-    # 5. Model failure found
-    # --------------------------------------------------------
-
-    if failed_models:
-
-        print("\n===================================")
-        print("MODEL FAILURE")
-        print("===================================")
-
-        for model in failed_models:
-
-            print(
-                f"Model  : {model['model_name']}\n"
-                f"Unique : {model['unique_id']}\n"
-                f"Status : {model['status']}\n"
-            )
-
-        print(
-            f"Failed model count = {len(failed_models)}"
-        )
-
-        decision = "dbt_retry_existing"
-
-
-    # --------------------------------------------------------
-    # 6. No model failure
-    # --------------------------------------------------------
-
-    else:
-
-        print("\n===================================")
-        print("NO MODEL FAILURE")
-        print("===================================")
-
-        print("Tests ignored")
-        print("Reconciliation failures ignored")
-        print("Skipped tests ignored")
-        print("Skipped models ignored")
-
-        decision = "dbt_build"
-
-
-    # --------------------------------------------------------
-    # 7. Set Databricks task value
-    # --------------------------------------------------------
-
-    return decision
-
-
-# ============================================================
 # MAIN
 # ============================================================
 
-decision = check_dbt_model_status(
-    RUN_RESULTS_FILE
-)
+decision = "dbt_build"
+failed_models = []
+
+
+# ------------------------------------------------------------
+# 1. Check run_results.json
+# ------------------------------------------------------------
+
+if not os.path.exists(RUN_RESULTS_FILE):
+
+    print("run_results.json not found")
+    print("Decision = dbt_build")
+
+else:
+
+    try:
+
+        with open(
+            RUN_RESULTS_FILE,
+            "r",
+            encoding="utf-8"
+        ) as f:
+
+            data = json.load(f)
+
+        results = data.get("results", [])
+
+        print(f"Total dbt results = {len(results)}")
+
+
+        # ----------------------------------------------------
+        # 2. Check ONLY model results
+        # ----------------------------------------------------
+
+        for result in results:
+
+            unique_id = result.get("unique_id", "")
+            status = result.get("status", "").lower()
+
+            # Ignore everything except models
+            if not unique_id.startswith("model."):
+
+                continue
+
+            print(
+                f"MODEL: {unique_id} | STATUS: {status}"
+            )
+
+
+            # ------------------------------------------------
+            # 3. Actual model failure
+            # ------------------------------------------------
+
+            if status in ("error", "fail"):
+
+                failed_models.append(unique_id)
+
+
+        # ----------------------------------------------------
+        # 4. Decide
+        # ----------------------------------------------------
+
+        if failed_models:
+
+            decision = "dbt_retry_existing"
+
+            print("\n========================================")
+            print("MODEL FAILURE FOUND")
+            print("========================================")
+
+            for model in failed_models:
+
+                print(f"FAILED MODEL: {model}")
+
+            print(
+                f"\nFailed model count = {len(failed_models)}"
+            )
+
+        else:
+
+            decision = "dbt_build"
+
+            print("\n========================================")
+            print("NO MODEL FAILURE")
+            print("========================================")
+
+            print("Tests ignored")
+            print("Reconciliation failures ignored")
+            print("Skipped tests ignored")
+            print("Skipped models ignored")
+
+
+    except Exception as e:
+
+        print(
+            f"Error reading run_results.json: {e}"
+        )
+
+        # Do not trigger model recovery for a JSON read problem
+        decision = "dbt_build"
+
+
+# ============================================================
+# 5. SET DATABRICKS TASK VALUE
+# ============================================================
+
+print("\n========================================")
+print(f"FINAL DBT DECISION = {decision}")
+print("========================================")
 
 dbutils.jobs.taskValues.set(
     key="dbt_decision",
@@ -154,5 +130,6 @@ dbutils.jobs.taskValues.set(
 )
 
 print(
-    f"\nCHECK_DBT_STATUS completed successfully: {decision}"
+    "Task value set successfully: "
+    f"dbt_decision = {decision}"
 )
