@@ -2,6 +2,11 @@ import json
 from datetime import datetime
 
 from pyspark.sql import Row
+from pyspark.sql.types import (
+    StructType, StructField,
+    StringType, DoubleType, LongType,
+    IntegerType, TimestampType, ArrayType,
+)
 
 
 MANIFEST_FILE = (
@@ -21,6 +26,49 @@ MANIFEST_TABLE = (
 RUN_RESULTS_TABLE = (
     "autdbt_vault_prod.control.dbt_run_results"
 )
+
+MANIFEST_SCHEMA = StructType([
+    StructField("invocation_id", StringType(), True),
+    StructField("generated_at", TimestampType(), True),
+    StructField("node_id", StringType(), True),
+    StructField("resource_type", StringType(), True),
+    StructField("package_name", StringType(), True),
+    StructField("name", StringType(), True),
+    StructField("database_name", StringType(), True),
+    StructField("schema_name", StringType(), True),
+    StructField("alias_name", StringType(), True),
+    StructField("relation_name", StringType(), True),
+    StructField("materialized", StringType(), True),
+    StructField("path", StringType(), True),
+    StructField("original_file_path", StringType(), True),
+    StructField("unique_id", StringType(), True),
+    StructField("depends_on_nodes", ArrayType(StringType()), True),
+    StructField("raw_code", StringType(), True),
+    StructField("compiled_code", StringType(), True),
+    StructField("checksum", StringType(), True),
+    StructField("tags", ArrayType(StringType()), True),
+    StructField("loaded_at", TimestampType(), True),
+])
+
+RUN_RESULTS_SCHEMA = StructType([
+    StructField("invocation_id", StringType(), True),
+    StructField("generated_at", TimestampType(), True),
+    StructField("unique_id", StringType(), True),
+    StructField("resource_type", StringType(), True),
+    StructField("status", StringType(), True),
+    StructField("execution_time", DoubleType(), True),
+    StructField("thread_id", StringType(), True),
+    StructField("node_name", StringType(), True),
+    StructField("database_name", StringType(), True),
+    StructField("schema_name", StringType(), True),
+    StructField("message", StringType(), True),
+    StructField("rows_affected", LongType(), True),
+    StructField("adapter_response", StringType(), True),
+    StructField("failures", IntegerType(), True),
+    StructField("run_started_at", TimestampType(), True),
+    StructField("run_completed_at", TimestampType(), True),
+    StructField("loaded_at", TimestampType(), True),
+])
 
 
 def load_json(path):
@@ -78,7 +126,7 @@ def load_manifest():
             )
         )
 
-    df = spark.createDataFrame(rows)
+    df = spark.createDataFrame(rows, schema=MANIFEST_SCHEMA)
 
     df.write \
         .format("delta") \
@@ -135,7 +183,7 @@ def load_run_results():
             )
         )
 
-    df = spark.createDataFrame(rows)
+    df = spark.createDataFrame(rows, schema=RUN_RESULTS_SCHEMA)
 
     df.write \
         .format("delta") \
