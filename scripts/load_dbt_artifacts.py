@@ -183,7 +183,6 @@ manifest_record = [(
     load_timestamp
 )]
 
-
 manifest_schema = StructType([
     StructField("invocation_id", StringType(), True),
     StructField("artifact_type", StringType(), True),
@@ -211,7 +210,6 @@ run_results_record = [(
     load_timestamp
 )]
 
-
 run_results_df = spark.createDataFrame(
     run_results_record,
     manifest_schema
@@ -223,6 +221,12 @@ run_results_df = spark.createDataFrame(
 # ============================================================
 
 print("\nLoading manifest table...")
+
+# Remove existing rows for this invocation_id to ensure idempotency on retries
+spark.sql(
+    f"DELETE FROM {MANIFEST_TABLE} "
+    f"WHERE invocation_id = '{invocation_id}'"
+)
 
 manifest_df.write \
     .format("delta") \
@@ -241,6 +245,12 @@ print(
 # ============================================================
 
 print("\nLoading run_results table...")
+
+# Remove existing rows for this invocation_id to ensure idempotency on retries
+spark.sql(
+    f"DELETE FROM {RUN_RESULTS_TABLE} "
+    f"WHERE invocation_id = '{invocation_id}'"
+)
 
 run_results_df.write \
     .format("delta") \
@@ -459,6 +469,12 @@ summary_df = spark.createDataFrame(
 
 print("\nLoading execution summary table...")
 
+# Remove existing rows for this invocation_id to ensure idempotency on retries
+spark.sql(
+    f"DELETE FROM {EXECUTION_SUMMARY_TABLE} "
+    f"WHERE invocation_id = '{invocation_id}'"
+)
+
 summary_df.write \
     .format("delta") \
     .mode("append") \
@@ -500,14 +516,12 @@ for r in results:
     status = (r.get("status") or "").lower()
 
     resource_type = (
-        unique_id.split(".")[0]
-        if "." in unique_id
+        unique_id.split(".")[0] if "." in unique_id
         else "unknown"
     )
 
     resource_name = (
-        unique_id.split(".")[-1]
-        if "." in unique_id
+        unique_id.split(".")[-1] if "." in unique_id
         else unique_id
     )
 
@@ -584,6 +598,12 @@ model_executions_df = spark.createDataFrame(
 # ============================================================
 
 print("\nLoading model executions table...")
+
+# Remove existing rows for this invocation_id to ensure idempotency on retries
+spark.sql(
+    f"DELETE FROM {MODEL_EXECUTIONS_TABLE} "
+    f"WHERE invocation_id = '{invocation_id}'"
+)
 
 model_executions_df.write \
     .format("delta") \
