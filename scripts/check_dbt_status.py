@@ -1,13 +1,12 @@
-import json
-import os
-
 # ============================================================
 # CONFIG
 # ============================================================
 
-RUN_RESULTS_FILE = (
-    "/Volumes/autdbt_vault_prod/dbt_artifacts/target/run_results.json"
-)
+CATALOG = "autdbt_vault_prod"
+SCHEMA = "autdbtt"
+
+EXECUTION_SUMMARY_TABLE = f"{CATALOG}.{SCHEMA}.dbt_execution_summary"
+MODEL_EXECUTIONS_TABLE = f"{CATALOG}.{SCHEMA}.dbt_model_executions"
 
 
 # ============================================================
@@ -15,109 +14,102 @@ RUN_RESULTS_FILE = (
 # ============================================================
 
 decision = "dbt_build"
-failed_models = []
 
 
 # ------------------------------------------------------------
-# 1. Check run_results.json
+# 1. Query control tables for error or skip models
 # ------------------------------------------------------------
 
-if not os.path.exists(RUN_RESULTS_FILE):
+status_query = f"""
+WITH latest_invocation AS (
+    SELECT invocation_id
+    FROM {EXECUTION_SUMMARY_TABLE}
+    ORDER BY loaded_at DESC
+    LIMIT 1
+)
+SELECT
+    m.unique_id,
+    m.status
+FROM {MODEL_EXECUTIONS_TABLE} m
+WHERE m.resource_type = 'model'
+  AND m.invocation_id = (
+      SELECT invocation_id FROM latest_invocation
+  )
+  AND LOWER(m.status) IN ('error', 'fail', 'skip')
+"""
 
-    print("run_results.json not found")
-    print("Decision = dbt_build")
+try:
 
-else:
+    print("=" * 80)
+    print("GWPC DataVault PROD")
+    print("DBT Status Check (Control Tables)")
+    print("=" * 80)
 
-    try:
+    # ------------------------------------------------
+    # 1a. First-run detection: are there any records?
+    # ------------------------------------------------
 
-        with open(
-            RUN_RESULTS_FILE,
-            "r",
-            encoding="utf-8"
-        ) as f:
+    count_query = f"""
+        SELECT COUNT(*) AS cnt
+        FROM {EXECUTION_SUMMARY_TABLE}
+    """
 
-            data = json.load(f)
+    total_records = spark.sql(count_query).collect()[0]["cnt"]
 
-        results = data.get("results", [])
+    print(f"\nTotal execution summary records: {total_records}")
 
-        print(f"Total dbt results = {len(results)}")
+    if total_records == 0:
 
+        print("\n========================================")
+        print("FIRST RUN - NO RECORDS IN CONTROL TABLES")
+        print("========================================")
+        print("Decision = dbt_build")
 
-        # ----------------------------------------------------
-        # 2. Check ONLY model results
-        # ----------------------------------------------------
+    else:
 
-        for result in results:
+        # --------------------------------------------
+        # 1b. Check latest invocation for error/skip
+        # --------------------------------------------
 
-            unique_id = result.get("unique_id", "")
-            status = result.get("status", "").lower()
+        error_skip_df = spark.sql(status_query)
+        error_skip_models = error_skip_df.collect()
 
-            # Ignore everything except models
-            if not unique_id.startswith("model."):
+        print(f"\nError/Skip model count: {len(error_skip_models)}")
 
-                continue
-
-            print(
-                f"MODEL: {unique_id} | STATUS: {status}"
-            )
-
-
-            # ------------------------------------------------
-            # 3. Actual model failure
-            # ------------------------------------------------
-
-            if status in ("error", "fail"):
-
-                failed_models.append(unique_id)
-
-
-        # ----------------------------------------------------
-        # 4. Decide
-        # ----------------------------------------------------
-
-        if failed_models:
+        if error_skip_models:
 
             decision = "dbt_retry_existing"
 
             print("\n========================================")
-            print("MODEL FAILURE FOUND")
+            print("ERROR OR SKIP MODELS FOUND")
             print("========================================")
 
-            for model in failed_models:
+            for row in error_skip_models:
 
-                print(f"FAILED MODEL: {model}")
+                print(f"MODEL: {row.unique_id} | STATUS: {row.status}")
 
             print(
-                f"\nFailed model count = {len(failed_models)}"
+                f"\nError/Skip model count = "
+                f"{len(error_skip_models)}"
             )
 
         else:
 
-            decision = "dbt_build"
-
             print("\n========================================")
-            print("NO MODEL FAILURE")
+            print("ALL MODELS SUCCESSFUL - NO ERROR OR SKIP")
             print("========================================")
-
-            print("Tests ignored")
-            print("Reconciliation failures ignored")
-            print("Skipped tests ignored")
-            print("Skipped models ignored")
+            print("Decision = dbt_build")
 
 
-    except Exception as e:
+except Exception as e:
 
-        print(
-            f"Error reading run_results.json: {e}"
-        )
-
-        # Do not trigger model recovery for a JSON read problem
-        decision = "dbt_build"
+    print(f"\nError querying control tables: {e}")
+    print("Defaulting to dbt_build")
+    decision = "dbt_build"
 
 
 # ============================================================
-# 5. SET DATABRICKS TASK VALUE
+# 2. SET DATABRICKS TASK VALUE
 # ============================================================
 
 print("\n========================================")
